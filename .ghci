@@ -1,0 +1,19 @@
+:set -Wall -fno-warn-name-shadowing -Wcompat
+:set -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints
+
+:set -isrc
+
+:load Data.Monoid.United
+
+:set prompt "\x03BB> "
+:set prompt-cont "\x03BB| "
+:!cls
+
+:{
+:def go \top -> return $ unlines $
+    [ ":set -XOverloadedLists"
+    , ":set -XOverloadedStrings"
+    , ":set -fno-warn-type-defaults"
+    , ":m Data.Monoid.United" ++ (if null top then "" else ".") ++ top
+    , ":show imports" ]
+:}
