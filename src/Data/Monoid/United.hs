@@ -23,7 +23,7 @@ empty = mempty
 overlay :: Semilattice m => m -> m -> m
 overlay = mappend
 
-overlays :: United m => [m] -> m
+overlays :: Semilattice m => [m] -> m
 overlays = foldr overlay empty
 
 infixr 6 <+>
