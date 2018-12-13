@@ -35,8 +35,10 @@ isContainedIn :: (Eq m, Semilattice m) => m -> m -> Bool
 isContainedIn x y = x <+> y == y
 
 -- Laws:
--- * Associativity: x <.> (y <.> z) == (x <.> y) <.> z
--- * Containment:           x <.> y == x <.> y <+> x
+-- * Associativity:  x <.> (y <.> z) == (x <.> y) <.> z
+-- * Distributivity: x <.> (y <+> z) == x <.> y <+> x <.> z
+--                   (x <+> y) <.> z == x <.> z <+> y <.> z
+-- * Containment:            x <.> y == x <.> y <+> x
 class Semilattice m => United m where
     connect :: m -> m -> m
 
