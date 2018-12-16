@@ -3,11 +3,14 @@
 module Data.Monoid.United where
 
 import Algebra.Graph (Graph, vertex)
+import Data.Functor
 import Data.List
+import Data.Map (Map)
 import Data.Set (Set)
 import Data.String
 
 import qualified Algebra.Graph as Graph
+import qualified Data.Map      as Map
 import qualified Data.Set      as Set
 
 -- | A monoid with two additional properties: /commutativity/ and /idempotence/.
@@ -102,6 +105,43 @@ instance United (Graph a) where
 -- TODO: Remove orphan instance
 instance IsString (Graph Point) where
     fromString = vertex . Point
+
+--------------------------------- Suffix trees ---------------------------------
+newtype SuffixTree a = SuffixTree { getSuffixTree :: Map a (SuffixTree a) }
+    deriving (Eq, Ord)
+
+instance Ord a => Semigroup (SuffixTree a) where
+    SuffixTree l <> SuffixTree r = SuffixTree $ Map.unionWith (<>) l r
+
+instance Ord a => Monoid (SuffixTree a) where
+    mempty = SuffixTree mempty
+
+instance Ord a => Semilattice (SuffixTree a)
+
+instance Ord a => United (SuffixTree a) where
+    SuffixTree l `connect` r = SuffixTree (l <&> (`connect` r)) <> r
+
+instance (Ord a, IsString a) => IsString (SuffixTree a) where
+    fromString = SuffixTree . (`Map.singleton` mempty) . fromString
+
+instance Show a => Show (SuffixTree a) where
+    show st = if length parts > 1 
+        then "(" ++ intercalate " + " parts ++ ")" 
+        else concat parts
+      where 
+        parts = 
+            map (\(a, n) -> show a ++ 
+                if Map.null (getSuffixTree n) then "" else "." ++ show n) . 
+            Map.toList . getSuffixTree $ st
+
+fasterIsContainedIn :: Ord a => SuffixTree a -> SuffixTree a -> Bool
+fasterIsContainedIn (SuffixTree l) (SuffixTree r) = 
+    Map.isSubmapOfBy fasterIsContainedIn l r
+
+toListOfWords :: SuffixTree a -> [[a]]
+toListOfWords (SuffixTree m) = 
+    (Map.toList m >>= \(a, n) -> map (a:) (toListOfWords n)) 
+    ++ return []
 
 ----------------------------- Simplicial complexes -----------------------------
 -- A simplex is formed on a set of points
