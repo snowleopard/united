@@ -38,10 +38,10 @@ isContainedIn :: (Eq m, Semilattice m) => m -> m -> Bool
 isContainedIn x y = x <+> y == y
 
 -- Laws:
--- * Associativity:  x <.> (y <.> z) == (x <.> y) <.> z
--- * Distributivity: x <.> (y <+> z) == x <.> y <+> x <.> z
---                   (x <+> y) <.> z == x <.> z <+> y <.> z
--- * Containment:            x <.> y == x <.> y <+> x
+-- * United identity:     a <.> empty == empty <.> a == a
+-- * Associativity:   a <.> (b <.> c) == (a <.> b) <.> c
+-- * Distributivity:  a <.> (b <+> c) == a <.> b <+> a <.> c
+--                    (a <+> b) <.> c == a <.> c <+> b <.> c
 class Semilattice m => United m where
     connect :: m -> m -> m
 
@@ -125,22 +125,22 @@ instance (Ord a, IsString a) => IsString (SuffixTree a) where
     fromString = SuffixTree . (`Map.singleton` mempty) . fromString
 
 instance Show a => Show (SuffixTree a) where
-    show st = if length parts > 1 
-        then "(" ++ intercalate " + " parts ++ ")" 
+    show st = if length parts > 1
+        then "(" ++ intercalate " + " parts ++ ")"
         else concat parts
-      where 
-        parts = 
-            map (\(a, n) -> show a ++ 
-                if Map.null (getSuffixTree n) then "" else "." ++ show n) . 
+      where
+        parts =
+            map (\(a, n) -> show a ++
+                if Map.null (getSuffixTree n) then "" else "." ++ show n) .
             Map.toList . getSuffixTree $ st
 
 fasterIsContainedIn :: Ord a => SuffixTree a -> SuffixTree a -> Bool
-fasterIsContainedIn (SuffixTree l) (SuffixTree r) = 
+fasterIsContainedIn (SuffixTree l) (SuffixTree r) =
     Map.isSubmapOfBy fasterIsContainedIn l r
 
 toListOfWords :: SuffixTree a -> [[a]]
-toListOfWords (SuffixTree m) = 
-    (Map.toList m >>= \(a, n) -> map (a:) (toListOfWords n)) 
+toListOfWords (SuffixTree m) =
+    (Map.toList m >>= \(a, n) -> map (a:) (toListOfWords n))
     ++ return []
 
 ----------------------------- Simplicial complexes -----------------------------
