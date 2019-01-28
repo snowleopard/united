@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, RankNTypes, TypeOperators #-}
+{-# LANGUAGE GADTs, RankNTypes, TupleSections, TypeOperators #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Functor.United where
 
@@ -38,9 +38,11 @@ class Applicative f => Monad' f where
     bind'   :: f :*: f  ~> f
 
 --------------------------------------------------------------------------------
--- Below is a draft justification for the following statement:
+-- Below is a draft justification for the following two statements:
 --
 --  Applicative and Monad are united monoids in the category of endofunctors.
+--
+--  Applicative and Monad are algebraic graphs in the category of endofunctors.
 --------------------------------------------------------------------------------
 
 -------------------- :+: is an idempotent commutative monoid -------------------
@@ -89,3 +91,14 @@ containment (fg :+: f) = mapRight identityPlus $ distributivity (fg :+: identity
 
 mapRight :: (g ~> h) -> f :*: g ~> f :*: h
 mapRight gh (f :*: g) = f :*: fmap gh g
+
+------------------------------- Algebraic graphs -------------------------------
+
+decomposition :: (Applicative f, Applicative g, Applicative h)
+    => (f :*: g) :+: (f :*: h) :+: (g :*: h) ~> (f :*: g) :*: h
+decomposition ((f1 :*: g1) :+: (f2 :*: h1) :+: (g2 :*: h2)) =
+    (f :*: uncurry g) :*: (\(x, k, j) -> h x k j)
+  where
+    f       = (,)              <$> f1    <*> f2
+    g i j   = (,,j)            <$> g1 i  <*> g2
+    h x k j = (flip ($) . ($x) <$> h1 j) <*> h2 k
