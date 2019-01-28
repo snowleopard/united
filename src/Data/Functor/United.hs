@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs, RankNTypes, TupleSections, TypeOperators #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.Functor.United where
 
 import Data.Functor.Identity
@@ -27,8 +26,11 @@ type (~>) f g = forall x. f x -> g x
 infixl 1 ~>
 
 -- Standard Applicative and Monad type classes can be defined via functor
--- composition :+: and :*: as follows. These alternative definitions reveal the
--- monoidal nature of these abstractions.
+-- composition :+: and :*: as follows. These definitions may seem strange at
+-- first, but if you inline :+: and :*: you will see that we simply pack the two
+-- arguments to (<*>) and (>>=) into the two product types, and use ~> to hide
+-- the underlying type a. These alternative definitions make the monoidal nature
+-- of Applicative and Monad abstractions more apparent.
 class Functor f => Applicative' f where
     pure' :: Identity ~> f
     ap'   :: f :+: f  ~> f
@@ -47,11 +49,17 @@ class Applicative f => Monad' f where
 
 -------------------- :+: is an idempotent commutative monoid -------------------
 
-identityPlus :: Functor f => f :+: Identity ~> f
-identityPlus (f :+: Identity k) = k <$> f
+rightIdentityPlus :: Functor f => f :+: Identity ~> f
+rightIdentityPlus (f :+: Identity k) = k <$> f
 
-identityPlusInv :: f ~> f :+: Identity
-identityPlusInv f = f :+: Identity id
+rightIdentityPlusInv :: f ~> f :+: Identity
+rightIdentityPlusInv f = f :+: Identity id
+
+leftIdentityPlus :: Functor f => Identity :+: f ~> f
+leftIdentityPlus = rightIdentityPlus . commutativityPlus
+
+leftIdentityPlusInv :: Functor f => f ~> Identity :+: f
+leftIdentityPlusInv = commutativityPlus . rightIdentityPlusInv
 
 associativityPlus :: Functor h => (f :+: g) :+: h ~> f :+: (g :+: h)
 associativityPlus ((f :+: g) :+: h) = f :+: (g :+: fmap (.) h)
@@ -70,14 +78,19 @@ idempotencePlusInv (f1 :+: f2) = f2 <*> f1
 
 -------------------------------- :*: is a monoid -------------------------------
 
-identityMult :: Functor f => f :*: Identity ~> f
-identityMult (f :*: k) = (runIdentity . k) <$> f
+rightIdentityMult :: Functor f => f :*: Identity ~> f
+rightIdentityMult (f :*: k) = (runIdentity . k) <$> f
 
-identityMultInv :: f ~> f :*: Identity
-identityMultInv f = f :*: pure
+rightIdentityMultInv :: f ~> f :*: Identity
+rightIdentityMultInv f = f :*: pure
 
 associativityMult :: (f :*: g) :*: h ~> f :*: (g :*: h)
 associativityMult ((f :*: g) :*: h) = f :*: (\x -> g x :*: h)
+
+associativityMultInv :: Applicative g => f :*: (g :*: h) ~> (f :*: g) :*: h
+associativityMultInv (f :*: gh) = (f :*: (k . gh)) :*: id
+  where
+    k (g :*: h) = fmap h g
 
 ------------------------ :+: and :*: are united monoids ------------------------
 
@@ -86,8 +99,15 @@ distributivity ((f1 :*: g) :+: (f2 :*: h)) = f :*: (\(x, y) -> g x :+: h y)
   where
     f = (,) <$> f1 <*> f2
 
-containment :: (Applicative f, Functor g) => ((f :*: g) :+: f) a -> (f :*: g) a
-containment (fg :+: f) = mapRight identityPlus $ distributivity (fg :+: identityMultInv f)
+distributivityInv :: f :*: (g :+: h) ~> (f :*: g) :+: (f :*: h)
+distributivityInv = error "TODO"
+
+containment :: (Applicative f, Functor g) => (f :*: g) :+: f ~> f :*: g
+containment (fg :+: f) = mapRight rightIdentityPlus $
+    distributivity (fg :+: rightIdentityMultInv f)
+
+containmentInv :: f :*: g ~> (f :*: g) :+: f
+containmentInv = error "TODO"
 
 mapRight :: (g ~> h) -> f :*: g ~> f :*: h
 mapRight gh (f :*: g) = f :*: fmap gh g
@@ -102,3 +122,35 @@ decomposition ((f1 :*: g1) :+: (f2 :*: h1) :+: (g2 :*: h2)) =
     f       = (,)              <$> f1    <*> f2
     g i j   = (,,j)            <$> g1 i  <*> g2
     h x k j = (flip ($) . ($x) <$> h1 j) <*> h2 k
+
+decompositionInv :: (f :*: g) :*: h ~> (f :*: g) :+: (f :*: h) :+: (g :*: h)
+decompositionInv = error "TODO"
+
+--------------------------------------------------------------------------------
+
+-- Proofs of isomorphism between functions (a -> b) and polymorphic expressions
+-- like:
+--
+--    forall f . Functor f     => f a -> f b
+--    forall f . Applicative f => f a -> f b
+--
+-- See this ICFP'18 paper by Guillaume Boisseau and Jeremy Gibbons for more details:
+-- https://icfp18.sigplan.org/event/icfp-2018-papers-what-you-needa-know-about-yoneda
+
+fromFun :: (a -> b) -> (forall f . Functor f => f a -> f b)
+fromFun f = fmap f
+
+toFun :: (forall f . Functor f => f a -> f b) -> (a -> b)
+toFun h = runIdentity . h . Identity
+
+fromFunA :: (a -> b) -> (forall f . Applicative f => f a -> f b)
+fromFunA f = fmap f
+
+toFunA :: (forall f . Applicative f => f a -> f b) -> (a -> b)
+toFunA h = runIdentity . h . Identity
+
+fromFunM :: (a -> b) -> (forall f . Monad f => f a -> f b)
+fromFunM f = fmap f
+
+toFunM :: (forall f . Monad f => f a -> f b) -> (a -> b)
+toFunM h = runIdentity . h . Identity
