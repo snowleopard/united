@@ -23,7 +23,8 @@ source-repository head
 
 library
     hs-source-dirs:     src
-    exposed-modules:    Data.Monoid.United
+    exposed-modules:    Data.Functor.United,
+                        Data.Monoid.United
     build-depends:      algebraic-graphs,
                         base        >= 4.7     && < 5,
                         containers  >= 0.5.5.1 && < 0.8
