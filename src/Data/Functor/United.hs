@@ -4,6 +4,11 @@ module Data.Functor.United where
 
 import Data.Functor.Identity
 
+-- Two ways of composing functors, whose definitions mirror the type signatures
+-- of the Applicative's (<*>) and Monad's (>>=) operators.
+-- Inspired by these awesome blog posts by Bartosz Milewski and Oleg Grenrus:
+-- https://bartoszmilewski.com/2018/02/17/free-monoidal-functors/
+-- http://oleg.fi/gists/posts/2018-02-21-single-free.html
 data (:+:) f g a where
     (:+:) :: f x -> g (x -> a) -> (f :+: g) a
 
@@ -16,9 +21,27 @@ instance Functor g => Functor (f :+: g) where
 instance Functor g => Functor (f :*: g) where
     fmap k (f :*: g) = f :*: (fmap k <$> g)
 
+-- A convenient alias for natural tranformations.
 type (~>) f g = forall x. f x -> g x
 
 infixl 1 ~>
+
+-- Standard Applicative and Monad type classes can be defined via functor
+-- composition :+: and :*: as follows. These alternative definitions reveal the
+-- monoidal nature of these abstractions.
+class Functor f => Applicative' f where
+    pure' :: Identity ~> f
+    ap'   :: f :+: f  ~> f
+
+class Applicative f => Monad' f where
+    return' :: Identity ~> f
+    bind'   :: f :*: f  ~> f
+
+--------------------------------------------------------------------------------
+-- Below is a draft justification for the following statement:
+--
+--  Applicative and Monad are united monoids in the category of endofunctors.
+--------------------------------------------------------------------------------
 
 -------------------- :+: is an idempotent commutative monoid -------------------
 
