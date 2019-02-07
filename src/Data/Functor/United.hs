@@ -76,7 +76,13 @@ idempotencePlus f = f :+: pure id
 idempotencePlusInv :: Applicative f => f :+: f ~> f
 idempotencePlusInv (f1 :+: f2) = f2 <*> f1
 
--------------------------------- :*: is a monoid -------------------------------
+-------------------------- :*: is an idempotent monoid -------------------------
+
+leftIdentityMult :: Identity :*: f ~> f
+leftIdentityMult (k :*: f) = f (runIdentity k)
+
+leftIdentityMultInv :: f ~> Identity :*: f
+leftIdentityMultInv f = pure () :*: const f
 
 rightIdentityMult :: Functor f => f :*: Identity ~> f
 rightIdentityMult (f :*: k) = (runIdentity . k) <$> f
@@ -92,22 +98,48 @@ associativityMultInv (f :*: gh) = (f :*: (k . gh)) :*: id
   where
     k (g :*: h) = fmap h g
 
+idempotenceMult :: Applicative f => f ~> f :*: f
+idempotenceMult f = pure () :*: const f
+
+idempotenceMultInv :: Monad f => f :*: f ~> f
+idempotenceMultInv (f1 :*: f2) = f1 >>= f2
+
 ------------------------ :+: and :*: are united monoids ------------------------
 
-distributivity :: Applicative f => (f :*: g) :+: (f :*: h) ~> f :*: (g :+: h)
-distributivity ((f1 :*: g) :+: (f2 :*: h)) = f :*: (\(x, y) -> g x :+: h y)
+leftDistributivity :: Applicative f => (f :*: g) :+: (f :*: h) ~> f :*: (g :+: h)
+leftDistributivity ((f1 :*: g) :+: (f2 :*: h)) = f :*: (\(x, y) -> g x :+: h y)
   where
     f = (,) <$> f1 <*> f2
 
-distributivityInv :: f :*: (g :+: h) ~> (f :*: g) :+: (f :*: h)
-distributivityInv = error "TODO"
+-- Could do with representable functors.
+leftDistributivityInv :: f :*: (g :+: h) ~> (f :*: g) :+: (f :*: h)
+leftDistributivityInv = error "TODO"
 
-containment :: (Applicative f, Functor g) => (f :*: g) :+: f ~> f :*: g
-containment (fg :+: f) = mapRight rightIdentityPlus $
-    distributivity (fg :+: rightIdentityMultInv f)
+rightDistributivity :: (Functor g, Applicative h) => (f :*: h) :+: (g :*: h) ~> (f :+: g) :*: h
+rightDistributivity ((f :*: h1) :+: (g :*: h2)) = (f :+: (flip (,) <$> g)) :*: h
+  where
+    h (i, j) = (flip ($) <$> h1 i) <*> h2 j
 
-containmentInv :: f :*: g ~> (f :*: g) :+: f
-containmentInv = error "TODO"
+-- Could do with representable functors.
+rightDistributivityInv :: (f :+: g) :*: h ~> (f :*: h) :+: (g :*: h)
+rightDistributivityInv = error "TODO"
+
+leftContainment :: (Applicative f, Functor g) => (f :*: g) :+: f ~> f :*: g
+leftContainment (fg :+: f) = mapRight rightIdentityPlus $
+    leftDistributivity (fg :+: rightIdentityMultInv f)
+
+rightContainment :: (Functor f, Applicative g) => (f :*: g) :+: g ~> f :*: g
+rightContainment (fg :+: g) = mapLeft rightIdentityPlus $
+    rightDistributivity (fg :+: leftIdentityMultInv g)
+
+leftContainmentInv :: f :*: g ~> (f :*: g) :+: f
+leftContainmentInv = error "TODO"
+
+rightContainmentInv :: f :*: g ~> (f :*: g) :+: g
+rightContainmentInv = error "TODO"
+
+mapLeft :: (f ~> g) -> f :*: h ~> g :*: h
+mapLeft fg (f :*: h) = fg f :*: h
 
 mapRight :: (g ~> h) -> f :*: g ~> f :*: h
 mapRight gh (f :*: g) = f :*: fmap gh g
@@ -143,14 +175,13 @@ fromFun f = fmap f
 toFun :: (forall f . Functor f => f a -> f b) -> (a -> b)
 toFun h = runIdentity . h . Identity
 
-fromFunA :: (a -> b) -> (forall f . Applicative f => f a -> f b)
-fromFunA f = fmap f
+-------------------------------------- Day -------------------------------------
 
-toFunA :: (forall f . Applicative f => f a -> f b) -> (a -> b)
-toFunA h = runIdentity . h . Identity
+data Day f g a where
+    Day :: f x -> g y -> (x -> y -> a) -> Day f g a
 
-fromFunM :: (a -> b) -> (forall f . Monad f => f a -> f b)
-fromFunM f = fmap f
+toDay :: (f :+: g) a -> Day f g a
+toDay (f :+: g) = Day f g (flip ($))
 
-toFunM :: (forall f . Monad f => f a -> f b) -> (a -> b)
-toFunM h = runIdentity . h . Identity
+fromDay :: Functor g => Day f g a -> (f :+: g) a
+fromDay (Day f g k) = f :+: (flip k <$> g)
