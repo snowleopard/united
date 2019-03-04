@@ -1,7 +1,9 @@
 {-# LANGUAGE GADTs, RankNTypes, TupleSections, TypeOperators #-}
 module Data.Functor.United where
 
+import Data.Bifunctor
 import Data.Functor.Identity
+import Data.Void
 
 -- Two ways of composing functors, whose definitions mirror the type signatures
 -- of the Applicative's (<*>) and Monad's (>>=) operators.
@@ -185,3 +187,30 @@ toDay (f :+: g) = Day f g (flip ($))
 
 fromDay :: Functor g => Day f g a -> (f :+: g) a
 fromDay (Day f g k) = f :+: (flip k <$> g)
+
+------------------------------ Selective functors ------------------------------
+data (:|:) f g a where
+    (:|:) :: f (Either x a) -> g (x -> a) -> (:|:) f g a
+
+class Applicative f => Selective f where
+    select :: f (Either a b) -> f (a -> b) -> f b
+
+leftIdentitySelect :: Selective f => Identity :|: f ~> f
+leftIdentitySelect ((Identity (Left  x)) :|: f) = ($x) <$> f
+leftIdentitySelect ((Identity (Right a)) :|: _) = pure a
+
+leftIdentitySelectInv :: Applicative f => f ~> Identity :|: f
+leftIdentitySelectInv f = pure (Left ()) :|: (const <$> f)
+
+rightIdentitySelect :: Functor f => f :|: Identity ~> f
+rightIdentitySelect (f :|: k) = either (runIdentity k) id <$> f
+
+rightIdentitySelectInv :: Applicative f => f ~> f :|: Identity
+rightIdentitySelectInv f = (Right <$> f) :|: pure absurd
+
+associativitySelect :: (Functor f, Functor g, Functor h) => f :|: (g :|: h) ~> (f :|: g) :|: h
+associativitySelect (f :|: (g :|: h)) = ((p <$> f) :|: (q <$> g)) :|: (r <$> h)
+  where
+    p x = Right <$> x
+    q y = \a -> bimap (,a) ($a) y
+    r z = uncurry z
