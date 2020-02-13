@@ -3,7 +3,7 @@
 
 :set -isrc
 
-:load Data.Functor.United Data.Monoid.United
+:load Data.Functor.United Data.Monoid.United Data.Monoid.United.Language
 
 :set prompt "\x03BB> "
 :set prompt-cont "\x03BB| "
