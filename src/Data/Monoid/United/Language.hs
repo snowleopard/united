@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs, RankNTypes, ScopedTypeVariables #-}
 module Data.Monoid.United.Language where
 
+import Control.Monad
 import Data.Array
 import Data.Bifunctor
 import Data.Monoid
@@ -30,8 +31,12 @@ instance Functor (U e) where
     fmap f = fold Nil (Tip . f) Bin Let
 
 instance Applicative (U e) where
-    pure = Tip
-    f <*> x = fold Nil (\w -> fold Nil (Tip . w) Bin Let x) Bin Let f
+    pure  = Tip
+    (<*>) = ap
+
+instance Monad (U e) where
+    return  = Tip
+    x >>= f = fold Nil f Bin Let x
 
 instance Bifunctor U where
     bimap f g = fold Nil (Tip . g) (Bin . f) Let
