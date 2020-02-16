@@ -4,7 +4,7 @@ module Data.Monoid.United.Language where
 import Control.Monad
 import Data.Array
 import Data.Bifunctor
-import Data.Monoid
+import Data.Void
 
 data U e a where
     Nil :: U e a
@@ -12,20 +12,36 @@ data U e a where
     Bin :: e -> U e a -> U e a -> U e a
     Let :: (Ix i, Show i) => Array i (U e a) -> U e (Either i a) -> U e a
 
-fold :: forall a b e f. Applicative f => (forall x. f x)
-     -> (a -> f b)
-     -> (forall x. e -> f x -> f x -> f x)
-     -> (forall x i. (Ix i, Show i) => Array i (f x) -> f (Either i x) -> f x)
+fold :: forall a b e r. Applicative r
+     => (forall x. r x)
+     -> (a -> r b)
+     -> (forall x. e -> r x -> r x -> r x)
+     -> (forall x i. (Ix i, Show i) => Array i (r x) -> r (Either i x) -> r x)
      -> U e a
-     -> f b
-fold e t b l = go t
+     -> r b
+fold n t b l = go t
   where
-    go :: (x -> f y) -> U e x -> f y
+    go :: (x -> r y) -> U e x -> r y
     go t x = case x of
-      Nil       -> e
+      Nil       -> n
       Tip a     -> t a
       Bin e x y -> b e (go t x) (go t y)
-      Let arr x -> l (fmap (go t) arr) (go (either (pure . Left) (fmap (fmap Right) t)) x)
+      Let arr x -> l (go t <$> arr) (go (either (pure . Left) (fmap Right <$> t)) x)
+
+monofold :: forall a e r. (forall x. r x)
+         -> (forall x. x -> r x)
+         -> (forall x. e -> r x -> r x -> r x)
+         -> (forall x i. (Ix i, Show i) => Array i (r x) -> r (Either i x) -> r x)
+         -> U e a
+         -> r a
+monofold n t b l = go
+  where
+    go :: U e x -> r x
+    go x = case x of
+      Nil       -> n
+      Tip a     -> t a
+      Bin e x y -> b e (go x) (go y)
+      Let arr x -> l (fmap go arr) (go x)
 
 instance Functor (U e) where
     fmap f = fold Nil (Tip . f) Bin Let
@@ -48,19 +64,20 @@ instance (Show e, Show a) => Show (U e a) where
         Bin e x y -> "(Bin " ++ show e ++ " " ++ show x ++ " " ++ show y ++ ")"
         Let arr x -> "(Let (" ++ show arr ++ ") " ++ show x ++ ")"
 
--- Fold with caching of Let subexpressions
+-- Fold with caching of results for Let subexpressions
 foldc :: r -> (a -> r) -> (e -> r -> r -> r) -> U e a -> r
-foldc e t b = go
+foldc n t b = go
   where
     go x = case x of
-      Nil       -> e
+      Nil       -> n
       Tip a     -> t a
       Bin e x y -> b e (go x) (go y)
       Let arr x -> let cache = fmap go arr
-                   in foldc e (either ((!) cache) t) b x
+                   in foldc n (either ((!) cache) t) b x
 
-type Set a = U () a
-type Graph a = U Any a
+type Maybe a = U Void a
+type Set   a = U ()   a
+type Graph a = U Bool a
 
 empty :: U e a
 empty = Nil
@@ -80,8 +97,17 @@ connect = Bin
 toSet :: U e a -> Set a
 toSet = first (const ())
 
--- compose :: U e a -> U e a -> U e a
+toGraph :: (e -> Bool) -> U e a -> Graph a
+toGraph p = first p
 
--- toGraph :: (Enum a, Bounded a) => U Bool a -> Graph
--- toGraph = undefined
+size :: U e a -> Int
+size = foldc 0 (const 1) (const (+))
 
+hasVertex :: Eq a => a -> U e a -> Bool
+hasVertex x = foldc False (==x) (const (||))
+
+induce :: (a -> Bool) -> U e a -> U e a
+induce p = fold Nil (\x -> if p x then Tip x else Nil) Bin Let
+
+removeVertex :: Eq a => a -> U e a -> U e a
+removeVertex x = induce (/=x)
