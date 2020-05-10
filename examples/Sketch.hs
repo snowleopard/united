@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, RankNTypes, TupleSections, TypeOperators #-}
-module Data.Functor.United where
+module Sketch where
 
 import Data.Bifunctor
 import Data.Functor.Identity

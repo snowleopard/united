@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs #-}
-module Data.Monoid.United where
+module Lattice where
 
 -- A lattice of united monoids
 
