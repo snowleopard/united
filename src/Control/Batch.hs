@@ -4,7 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
 -----------------------------------------------------------------------------
 -- |
--- Module     : Data.Batch
+-- Module     : Control.Batch
 -- Copyright  : (c) Andrey Mokhov 2020
 -- License    : MIT (see the file LICENSE)
 -- Maintainer : andrey.mokhov@gmail.com

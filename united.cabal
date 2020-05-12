@@ -23,7 +23,9 @@ source-repository head
 
 library
     hs-source-dirs:     src
-    exposed-modules:    Data.Functor.United
+    exposed-modules:    Control.Batch
+                        Control.Match
+                        Control.Profunctor.Batch
                         Data.Monoid.United
                         Data.Monoid.United.Language
     build-depends:      algebraic-graphs,

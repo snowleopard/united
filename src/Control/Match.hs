@@ -4,7 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
 -----------------------------------------------------------------------------
 -- |
--- Module     : Data.Match
+-- Module     : Control.Match
 -- Copyright  : (c) Andrey Mokhov 2020
 -- License    : MIT (see the file LICENSE)
 -- Maintainer : andrey.mokhov@gmail.com
@@ -16,7 +16,6 @@
 module Control.Match where
 
 import Data.Function
-import Data.Functor.Identity
 import Prelude hiding (fmap, pure)
 
 ------------------------------------- Tags -------------------------------------
