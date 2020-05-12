@@ -42,8 +42,12 @@ data Two a b c where
 data Many a b c where
     Many :: a -> Many a b b
 
-------------------------------- Match type class -------------------------------
+-- | A generalised sum type where @t@ stands for the type of constructor "tags".
+-- Each tag has a type parameter @x@ which determines the type of the payload.
+data Sigma t a where
+    Sigma :: t x -> (x -> a) -> Sigma t a
 
+------------------------------- Match type class -------------------------------
 data Selector f t a where
     Z :: Selector f Zero a
     O :: (x -> a) -> Selector f (One x) a
