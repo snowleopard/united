@@ -15,10 +15,10 @@
 -----------------------------------------------------------------------------
 module Control.Batch where
 
+import Control.Applicative
 import Data.Function
 import Data.Functor.Identity
 import Data.Proxy
-import Prelude hiding (fmap, pure)
 
 ------------------------------------- Tags -------------------------------------
 -- | A data type defining no tags. Similar to 'Data.Void.Void' but parameterised.
@@ -52,37 +52,33 @@ type Aggregate t a = (forall x. t x -> x) -> a
 class Batch t f where
     batch :: Aggregate t a -> (forall x. t x -> f x) -> f a
 
-pure :: Batch Zero f => a -> f a
-pure a = batch (const a) (\(x :: Zero a) -> case x of {})
+pure_ :: Batch Zero f => a -> f a
+pure_ a = batch (const a) (\(x :: Zero a) -> case x of {})
 
 unit :: Batch Zero f => f ()
-unit = pure ()
+unit = pure_ ()
 
-fmap :: Batch (One a) f => (a -> b) -> f a -> f b
-fmap f x = batch (\get -> f (get One)) (\One -> x)
+fmap_ :: Batch (One a) f => (a -> b) -> f a -> f b
+fmap_ f x = batch (\get -> f (get One)) (\One -> x)
 
-liftA2 :: Batch (Two a b) f => (a -> b -> c) -> f a -> f b -> f c
-liftA2 f x y = batch (\get -> f (get A) (get B)) $ \case { A -> x; B -> y }
+liftA2_ :: Batch (Two a b) f => (a -> b -> c) -> f a -> f b -> f c
+liftA2_ f x y = batch (\get -> f (get A) (get B)) $ \case { A -> x; B -> y }
 
-(<*>) :: Batch (Two (a -> b) a) f => f (a -> b) -> f a -> f b
-(<*>) = liftA2 ($)
+apply :: Batch (Two (a -> b) a) f => f (a -> b) -> f a -> f b
+apply = liftA2_ ($)
 
 mult :: Batch (Two a b) f => f a -> f b -> f (a, b)
-mult = liftA2 (,)
+mult = liftA2_ (,)
 
-mfix :: Batch (Many a a) f => (a -> f a) -> f a
-mfix f = batch (\lookup -> fix (lookup . Many)) (\(Many a) -> f a)
+mfix_ :: Batch (Many a a) f => (a -> f a) -> f a
+mfix_ f = batch (\lookup -> fix (lookup . Many)) (\(Many a) -> f a)
 
 -- Type synonyms for classic type classes:
-type Pointed     f = Batch Zero f
-type Functor     f = forall a. Batch (One a) f
-type Applicative f = forall a b. (Batch Zero f, Batch (Two a b) f)
-type Apply       f = forall a b. Batch (Two a b) f
-type MonadFix    f = forall a. Batch (Many a a) f
-
--- Constrained versions of type classes, e.g. for "Data.Set".
-type FunctorOrd     f = forall a. (Ord a, Batch (One a) f)
-type ApplicativeOrd f = forall a b. (Ord a, Ord b, Batch Zero f, Batch (Two a b) f)
+type Pointed_     f = Batch Zero f
+type Functor_     f = forall a. Batch (One a) f
+type Applicative_ f = forall a b. (Batch Zero f, Batch (One a) f, Batch (Two a b) f)
+type Apply_       f = forall a b. (Batch (One a) f, Batch (Two a b) f)
+type MonadFix_    f = forall a. Batch (Many a a) f
 
 ----------------------------------- Instances ----------------------------------
 instance Batch t Identity where
@@ -90,6 +86,9 @@ instance Batch t Identity where
 
 instance Batch t Proxy where
     batch _ _ = Proxy
+
+instance Batch t ((->) env) where
+    batch f effects = \env -> f (\t -> effects t env)
 
 -- The 'Maybe' monad is a somewhat less trivial example, which we generalise
 -- below to any monad.
@@ -107,23 +106,38 @@ instance Batch (Two a b) Maybe where
         b <- effects B
         return $ f $ \case { A -> a; B -> b }
 
--- | Any monad can be given a sequential 'Batch' instance by running the given
--- effects in sequence and feeding the results to the aggregation function.
-newtype Sequential m a = Sequential { getSequential :: m a }
-    deriving (Prelude.Functor, Prelude.Applicative, Prelude.Monad)
+-- | Any monad can be given a sequential 'Batch' instance by running the effects
+-- in sequence and feeding the results to the aggregation function.
+newtype Sequential f a = Sequential { getSequential :: f a }
+    deriving (Functor, Applicative, Monad)
 
-instance Monad m => Batch Zero (Sequential m) where
+instance Monad f => Batch Zero (Sequential f) where
     batch f _ = return $ f $ \case {}
 
-instance Monad m => Batch (One a) (Sequential m) where
+instance Monad f => Batch (One a) (Sequential f) where
     batch f effects = do
         a <- effects One
         return $ f $ \One -> a
 
-instance Monad m => Batch (Two a b) (Sequential m) where
+instance Monad f => Batch (Two a b) (Sequential f) where
     batch f effects = do
         a <- effects A
         b <- effects B
         return $ f $ \case { A -> a; B -> b }
+
+-- | Any applicative functor can be given a parallel 'Batch' instance by running
+-- the effects in parallel and feeding the results to the aggregation function.
+newtype Parallel f a = Parallel { getParallel :: f a }
+    deriving (Functor, Applicative)
+
+instance Applicative f => Batch Zero (Parallel f) where
+    batch f _ = pure $ f $ \case {}
+
+instance Applicative f => Batch (One a) (Parallel f) where
+    batch f effects = (\a -> f $ \One -> a) <$> effects One
+
+instance Applicative f => Batch (Two a b) (Parallel f) where
+    batch f effects =
+        liftA2 (\a b -> f $ \case { A -> a; B -> b }) (effects A) (effects B)
 
 -- ...
