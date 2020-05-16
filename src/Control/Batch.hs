@@ -17,6 +17,7 @@ module Control.Batch where
 
 import Data.Function
 import Data.Functor.Identity
+import Data.Proxy
 import Prelude hiding (fmap, pure)
 
 ------------------------------------- Tags -------------------------------------
@@ -85,6 +86,44 @@ type ApplicativeOrd f = forall a b. (Ord a, Ord b, Batch Zero f, Batch (Two a b)
 
 ----------------------------------- Instances ----------------------------------
 instance Batch t Identity where
-    batch f xs = Identity $ f (runIdentity . xs)
+    batch f effects = Identity $ f (runIdentity . effects)
+
+instance Batch t Proxy where
+    batch _ _ = Proxy
+
+-- The 'Maybe' monad is a somewhat less trivial example, which we generalise
+-- below to any monad.
+instance Batch Zero Maybe where
+    batch f _ = Just $ f $ \case {}
+
+instance Batch (One a) Maybe where
+    batch f effects = do
+        a <- effects One
+        return $ f $ \One -> a
+
+instance Batch (Two a b) Maybe where
+    batch f effects = do
+        a <- effects A
+        b <- effects B
+        return $ f $ \case { A -> a; B -> b }
+
+-- | Any monad can be given a sequential 'Batch' instance by running the given
+-- effects in sequence and feeding the results to the aggregation function.
+newtype Sequential m a = Sequential { getSequential :: m a }
+    deriving (Prelude.Functor, Prelude.Applicative, Prelude.Monad)
+
+instance Monad m => Batch Zero (Sequential m) where
+    batch f _ = return $ f $ \case {}
+
+instance Monad m => Batch (One a) (Sequential m) where
+    batch f effects = do
+        a <- effects One
+        return $ f $ \One -> a
+
+instance Monad m => Batch (Two a b) (Sequential m) where
+    batch f effects = do
+        a <- effects A
+        b <- effects B
+        return $ f $ \case { A -> a; B -> b }
 
 -- ...
