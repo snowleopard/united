@@ -39,9 +39,9 @@ data Two a b c where
 
 -- Interestingly, this matches the type Mono from this blog post:
 -- https://elvishjerricco.github.io/2017/03/23/applicative-sorting.html
--- | A potentially uncountable collection of tags.
-data Many a b c where
-    Many :: a -> Many a b b
+-- | A potentially uncountable collection of tags indexed by values of type @i@.
+data Many i a b where
+    Many :: i -> Many i a a
 
 ------------------------------- Batch type class -------------------------------
 
@@ -125,6 +125,11 @@ instance Monad f => Batch (Two a b) (Sequential f) where
         b <- effects B
         return $ f $ \case { A -> a; B -> b }
 
+-- This is clearly silly performance-wise, so will need to be improved.
+instance (Monad f, Enum i) => Batch (Many i a) (Sequential f) where
+    batch f effects = fmap (\xs -> f (\(Many i) -> xs !! fromEnum i)) $
+        sequence [ effects (Many i) | i <- enumFrom (toEnum 0)]
+
 -- | Any applicative functor can be given a parallel 'Batch' instance by running
 -- the effects in parallel and feeding the results to the aggregation function.
 newtype Parallel f a = Parallel { getParallel :: f a }
@@ -139,5 +144,10 @@ instance Applicative f => Batch (One a) (Parallel f) where
 instance Applicative f => Batch (Two a b) (Parallel f) where
     batch f effects =
         liftA2 (\a b -> f $ \case { A -> a; B -> b }) (effects A) (effects B)
+
+-- This is clearly silly performance-wise, so will need to be improved.
+instance (Applicative f, Enum i) => Batch (Many i a) (Parallel f) where
+    batch f effects = fmap (\xs -> f (\(Many i) -> xs !! fromEnum i)) $
+        sequenceA [ effects (Many i) | i <- enumFrom (toEnum 0)]
 
 -- ...
