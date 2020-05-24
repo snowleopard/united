@@ -20,7 +20,9 @@ import Data.Array
 import Data.Function
 import Data.Functor.Identity
 import Data.Functor.Product
+import Data.Monoid hiding (Product)
 import Data.Proxy
+import Prelude hiding (foldMap)
 
 ------------------------------------- Tags -------------------------------------
 -- | A data type defining no tags. Similar to 'Data.Void.Void' but parameterised.
@@ -44,6 +46,44 @@ data Two a b c where
 -- | A potentially uncountable collection of tags indexed by values of type @i@.
 data Many i a b where
     Many :: i -> Many i a a
+
+-- | An equivalent of 'Foldable' for @t@-shaped containers.
+class Fold t where
+    fold :: Monoid m => (forall x. t x -> m) -> m
+
+instance Fold Zero where
+    fold _ = mempty
+
+instance Fold (One a) where
+    fold get = get One
+
+instance Fold (Two a b) where
+    fold get = get A <> get B
+
+instance Enum i => Fold (Many i a) where
+    fold get = mconcat [ get (Many i) | i <- enumFrom (toEnum 0) ]
+
+foldMap :: (Fold t, Monoid m) => (a -> m) -> (forall x. t x -> a) -> m
+foldMap f get = fold (f . get)
+
+toList :: Fold t => (forall x. t x -> a) -> [a]
+toList = foldMap pure
+
+toListN :: Fold t => (forall x. t x -> a) -> ([a], Int)
+toListN get = getSum <$> foldMap (\a -> ([a], Sum 1)) get
+
+newtype Cache i a = Cache { getCache :: Array Int a }
+    deriving (Functor, Foldable, Traversable)
+
+cache :: Enum i => (forall x. Many i a x -> f x) -> Cache i (f a)
+cache effects = Cache $ listArray (0, len - 1) all
+  where
+    (all, len) = toListN (mono effects)
+    mono :: (forall x. Many i a x -> f x) -> (forall x. Many i a x -> f a)
+    mono get (Many i) = get (Many i)
+
+runCache :: Enum i => ((forall x. Many i a x -> x) -> b) -> Cache i a -> b
+runCache f (Cache a) = f (\(Many i) -> a ! fromEnum i)
 
 ------------------------------- Batch type class -------------------------------
 
@@ -83,11 +123,11 @@ type Apply_       f = forall a b. (Batch (One a) f, Batch (Two a b) f)
 type MonadFix_    f = forall a. Batch (Many a a) f
 
 ----------------------------------- Instances ----------------------------------
-instance Batch t Identity where
-    batch f effects = Identity $ f (runIdentity . effects)
-
 instance Batch t Proxy where
     batch _ _ = Proxy
+
+instance Batch t Identity where
+    batch f effects = Identity $ f (runIdentity . effects)
 
 instance Batch t ((->) env) where
     batch f effects = \env -> f (\t -> effects t env)
@@ -97,6 +137,13 @@ instance (Batch t f, Batch t g) => Batch t (Product f g) where
       where
         fst (Pair f _) = f
         snd (Pair _ g) = g
+
+instance (Fold t, Monoid m) => Batch t (Const m) where
+    batch _ effects = Const $ fold (getConst . effects)
+
+-- Write: a Product of Const and Identity.
+instance (Fold t, Monoid m) => Batch t ((,) m) where
+    batch f effects = (fold (fst . effects), f (snd . effects))
 
 -- The 'Maybe' monad is a somewhat less trivial example, which we generalise
 -- below to any monad.
@@ -133,19 +180,7 @@ instance Monad f => Batch (Two a b) (Sequential f) where
         b <- effects B
         return $ f $ \case { A -> a; B -> b }
 
-newtype Cache i a = Cache { getCache :: Array Int a }
-    deriving (Functor, Foldable, Traversable)
-
-cache :: (Bounded i, Enum i) => (forall x. Many i a x -> f x) -> Cache i (f a)
-cache fs = Cache $ listArray (0, fromEnum top) [ fs (Many i) | i <- all ]
-  where
-    top = maxBound
-    all = [toEnum 0..top]
-
-runCache :: Enum i => ((forall x. Many i a x -> x) -> b) -> Cache i a -> b
-runCache f (Cache a) = f (\(Many i) -> a ! fromEnum i)
-
-instance (Monad f, Enum i, Bounded i) => Batch (Many i a) (Sequential f) where
+instance (Monad f, Enum i) => Batch (Many i a) (Sequential f) where
     batch f effects = runCache f <$> sequence (cache effects)
 
 -- | Any applicative functor can be given a parallel 'Batch' instance by running
@@ -163,7 +198,7 @@ instance Applicative f => Batch (Two a b) (Parallel f) where
     batch f effects =
         liftA2 (\a b -> f $ \case { A -> a; B -> b }) (effects A) (effects B)
 
-instance (Applicative f, Bounded i, Enum i) => Batch (Many i a) (Parallel f) where
+instance (Applicative f, Enum i) => Batch (Many i a) (Parallel f) where
     batch f effects = runCache f <$> sequenceA (cache effects)
 
 -- ...
