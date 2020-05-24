@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, QuantifiedConstraints #-}
 {-# LANGUAGE ConstraintKinds, FunctionalDependencies, MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveFunctor, EmptyCase, LambdaCase, GADTs, RankNTypes #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
+{-# LANGUAGE DeriveFunctor, DeriveTraversable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables, EmptyCase, LambdaCase, GADTs, RankNTypes #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module     : Control.Batch
@@ -16,8 +16,10 @@
 module Control.Batch where
 
 import Control.Applicative
+import Data.Array
 import Data.Function
 import Data.Functor.Identity
+import Data.Functor.Product
 import Data.Proxy
 
 ------------------------------------- Tags -------------------------------------
@@ -90,6 +92,12 @@ instance Batch t Proxy where
 instance Batch t ((->) env) where
     batch f effects = \env -> f (\t -> effects t env)
 
+instance (Batch t f, Batch t g) => Batch t (Product f g) where
+    batch f effects = Pair (batch f $ fst . effects) (batch f $ snd . effects)
+      where
+        fst (Pair f _) = f
+        snd (Pair _ g) = g
+
 -- The 'Maybe' monad is a somewhat less trivial example, which we generalise
 -- below to any monad.
 instance Batch Zero Maybe where
@@ -125,10 +133,20 @@ instance Monad f => Batch (Two a b) (Sequential f) where
         b <- effects B
         return $ f $ \case { A -> a; B -> b }
 
--- This is clearly silly performance-wise, so will need to be improved.
-instance (Monad f, Enum i) => Batch (Many i a) (Sequential f) where
-    batch f effects = fmap (\xs -> f (\(Many i) -> xs !! fromEnum i)) $
-        sequence [ effects (Many i) | i <- enumFrom (toEnum 0)]
+newtype Cache i a = Cache { getCache :: Array Int a }
+    deriving (Functor, Foldable, Traversable)
+
+cache :: (Bounded i, Enum i) => (forall x. Many i a x -> f x) -> Cache i (f a)
+cache fs = Cache $ listArray (0, fromEnum top) [ fs (Many i) | i <- all ]
+  where
+    top = maxBound
+    all = [toEnum 0..top]
+
+runCache :: Enum i => ((forall x. Many i a x -> x) -> b) -> Cache i a -> b
+runCache f (Cache a) = f (\(Many i) -> a ! fromEnum i)
+
+instance (Monad f, Enum i, Bounded i) => Batch (Many i a) (Sequential f) where
+    batch f effects = runCache f <$> sequence (cache effects)
 
 -- | Any applicative functor can be given a parallel 'Batch' instance by running
 -- the effects in parallel and feeding the results to the aggregation function.
@@ -145,9 +163,7 @@ instance Applicative f => Batch (Two a b) (Parallel f) where
     batch f effects =
         liftA2 (\a b -> f $ \case { A -> a; B -> b }) (effects A) (effects B)
 
--- This is clearly silly performance-wise, so will need to be improved.
-instance (Applicative f, Enum i) => Batch (Many i a) (Parallel f) where
-    batch f effects = fmap (\xs -> f (\(Many i) -> xs !! fromEnum i)) $
-        sequenceA [ effects (Many i) | i <- enumFrom (toEnum 0)]
+instance (Applicative f, Bounded i, Enum i) => Batch (Many i a) (Parallel f) where
+    batch f effects = runCache f <$> sequenceA (cache effects)
 
 -- ...
