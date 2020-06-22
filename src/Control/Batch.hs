@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds, FunctionalDependencies, MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveFunctor, DeriveTraversable, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables, EmptyCase, LambdaCase, GADTs, RankNTypes #-}
+{-# LANGUAGE UndecidableInstances, TypeFamilies #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module     : Control.Batch
@@ -18,6 +19,7 @@ module Control.Batch where
 import Control.Applicative
 import Data.Array
 import Data.Function
+import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Monoid hiding (Product)
@@ -144,6 +146,53 @@ instance (Fold t, Monoid m) => Batch t (Const m) where
 -- Write: a Product of Const and Identity.
 instance (Fold t, Monoid m) => Batch t ((,) m) where
     batch f effects = (fold (fst . effects), f (snd . effects))
+
+class Push t where
+    type Pushed t (g :: * -> *) :: * -> *
+    push :: (forall x. t x -> f (g x)) -> (forall x. (Pushed t g) x -> f x)
+    pop  :: (forall x. (Pushed t g) x -> x) -> (forall x. t x -> g x)
+
+instance Push Zero where
+    type Pushed Zero g = Zero
+    push _get = \case {}
+    pop  _get = \case {}
+
+instance Push (One a) where
+    type Pushed (One a) g = One (g a)
+    push get One = get One
+    pop  get One = get One
+
+instance Push (Two a b) where
+    type Pushed (Two a b) g = Two (g a) (g b)
+    push get = \case { A -> get A; B -> get B }
+    pop  get = \case { A -> get A; B -> get B }
+
+instance Push (Many i a) where
+    type Pushed (Many i a) g = Many i (g a)
+    push get (Many i) = get (Many i)
+    pop  get (Many i) = get (Many i)
+
+-- TODO: This requires UndecidableInstances. Can we avoid it?
+instance (Batch (Pushed t g) f, Batch t g, Push t) => Batch t (Compose f g) where
+    batch f effects = Compose $ batch (pull f) (push $ getCompose . effects)
+      where
+        pull :: Aggregate t r -> (forall x. Pushed t g x -> x) -> g r
+        pull f get = batch f (pop get)
+
+-- TODO: Add instance Fold t => Batch t Maybe and simplify the constraint below
+instance (Fold t, Batch t Maybe) => Batch t ZipList where
+    batch f effects = case batch f heads of
+        Nothing -> ZipList []
+        Just x  -> ZipList $ x : getZipList (batch f tails)
+      where
+        heads :: forall x. t x -> Maybe x
+        heads t = case effects t of
+            ZipList []    -> Nothing
+            ZipList (x:_) -> Just x
+        tails :: forall x. t x -> ZipList x
+        tails t = case effects t of
+            ZipList [] -> ZipList []
+            ZipList (_:xs) -> ZipList xs
 
 -- The 'Maybe' monad is a somewhat less trivial example, which we generalise
 -- below to any monad.
