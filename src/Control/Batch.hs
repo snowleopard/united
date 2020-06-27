@@ -2,7 +2,6 @@
 {-# LANGUAGE ConstraintKinds, FunctionalDependencies, MultiParamTypeClasses #-}
 {-# LANGUAGE DeriveFunctor, DeriveTraversable, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables, EmptyCase, LambdaCase, GADTs, RankNTypes #-}
-{-# LANGUAGE UndecidableInstances, TypeFamilies #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module     : Control.Batch
@@ -22,6 +21,7 @@ import Data.Function
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
+import Data.Maybe
 import Data.Monoid hiding (Product)
 import Data.Proxy
 import Prelude hiding (foldMap)
@@ -43,7 +43,7 @@ data Two a b c where
     A :: Two a b a
     B :: Two a b b
 
--- Interestingly, this matches the type Mono from this blog post:
+-- Interestingly, this matches the type 'Mono' from this blog post:
 -- https://elvishjerricco.github.io/2017/03/23/applicative-sorting.html
 -- | A potentially uncountable collection of tags indexed by values of type @i@.
 data Many i a b where
@@ -89,12 +89,9 @@ runCache f (Cache a) = f (\(Many i) -> a ! fromEnum i)
 
 ------------------------------- Batch type class -------------------------------
 
--- | Given a product of values tagged by @t@, combine them into the a result.
-type Aggregate t a = (forall x. t x -> x) -> a
-
 -- | Generalisation of various abstractions that aggregate multiple effects.
 class Batch t f where
-    batch :: Aggregate t a -> (forall x. t x -> f x) -> f a
+    batch :: ((forall x. t x -> x) -> a) -> (forall x. t x -> f x) -> f a
 
 pure_ :: Batch Zero f => a -> f a
 pure_ a = batch (const a) (\(x :: Zero a) -> case x of {})
@@ -147,40 +144,22 @@ instance (Fold t, Monoid m) => Batch t (Const m) where
 instance (Fold t, Monoid m) => Batch t ((,) m) where
     batch f effects = (fold (fst . effects), f (snd . effects))
 
-class Push t where
-    type Pushed t (g :: * -> *) :: * -> *
-    push :: (forall x. t x -> f (g x)) -> (forall x. (Pushed t g) x -> f x)
-    pop  :: (forall x. (Pushed t g) x -> x) -> (forall x. t x -> g x)
+data Wrapped t w a where
+    W :: t x -> Wrapped t w (w x)
 
-instance Push Zero where
-    type Pushed Zero g = Zero
-    push _get = \case {}
-    pop  _get = \case {}
-
-instance Push (One a) where
-    type Pushed (One a) g = One (g a)
-    push get One = get One
-    pop  get One = get One
-
-instance Push (Two a b) where
-    type Pushed (Two a b) g = Two (g a) (g b)
-    push get = \case { A -> get A; B -> get B }
-    pop  get = \case { A -> get A; B -> get B }
-
-instance Push (Many i a) where
-    type Pushed (Many i a) g = Many i (g a)
-    push get (Many i) = get (Many i)
-    pop  get (Many i) = get (Many i)
-
--- TODO: This requires UndecidableInstances. Can we avoid it?
-instance (Batch (Pushed t g) f, Batch t g, Push t) => Batch t (Compose f g) where
-    batch f effects = Compose $ batch (pull f) (push $ getCompose . effects)
+instance (Batch (Wrapped t g) f, Batch t g) => Batch t (Compose f g) where
+    batch f effects = Compose $ batch (\get -> batch f (get . W)) wrapped
       where
-        pull :: Aggregate t r -> (forall x. Pushed t g x -> x) -> g r
-        pull f get = batch f (pop get)
+        wrapped :: forall x. Wrapped t g x -> f x
+        wrapped (W t) = getCompose (effects t)
 
--- TODO: Add instance Fold t => Batch t Maybe and simplify the constraint below
-instance (Fold t, Batch t Maybe) => Batch t ZipList where
+-- TODO: Get rid of the unsafe 'fromJust'
+instance Fold t => Batch t Maybe where
+    batch f effects = case fold (All . isJust . effects) of
+        All True  -> Just $ f (fromJust . effects)
+        All False -> Nothing
+
+instance Fold t => Batch t ZipList where
     batch f effects = case batch f heads of
         Nothing -> ZipList []
         Just x  -> ZipList $ x : getZipList (batch f tails)
@@ -193,22 +172,6 @@ instance (Fold t, Batch t Maybe) => Batch t ZipList where
         tails t = case effects t of
             ZipList [] -> ZipList []
             ZipList (_:xs) -> ZipList xs
-
--- The 'Maybe' monad is a somewhat less trivial example, which we generalise
--- below to any monad.
-instance Batch Zero Maybe where
-    batch f _ = Just $ f $ \case {}
-
-instance Batch (One a) Maybe where
-    batch f effects = do
-        a <- effects One
-        return $ f $ \One -> a
-
-instance Batch (Two a b) Maybe where
-    batch f effects = do
-        a <- effects A
-        b <- effects B
-        return $ f $ \case { A -> a; B -> b }
 
 -- | Any monad can be given a sequential 'Batch' instance by running the effects
 -- in sequence and feeding the results to the aggregation function.
