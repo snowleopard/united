@@ -144,6 +144,12 @@ instance (Fold t, Monoid m) => Batch t (Const m) where
 instance (Fold t, Monoid m) => Batch t ((,) m) where
     batch f effects = (fold (fst . effects), f (snd . effects))
 
+-- TODO: Get rid of the unsafe 'fromJust'
+instance Fold t => Batch t Maybe where
+    batch f effects = case fold (All . isJust . effects) of
+        All True  -> Just $ f (fromJust . effects)
+        All False -> Nothing
+
 data Wrapped t w a where
     W :: t x -> Wrapped t w (w x)
 
@@ -152,12 +158,6 @@ instance (Batch (Wrapped t g) f, Batch t g) => Batch t (Compose f g) where
       where
         wrapped :: forall x. Wrapped t g x -> f x
         wrapped (W t) = getCompose (effects t)
-
--- TODO: Get rid of the unsafe 'fromJust'
-instance Fold t => Batch t Maybe where
-    batch f effects = case fold (All . isJust . effects) of
-        All True  -> Just $ f (fromJust . effects)
-        All False -> Nothing
 
 instance Fold t => Batch t ZipList where
     batch f effects = case batch f heads of
@@ -170,8 +170,24 @@ instance Fold t => Batch t ZipList where
             ZipList (x:_) -> Just x
         tails :: forall x. t x -> ZipList x
         tails t = case effects t of
-            ZipList [] -> ZipList []
+            ZipList []     -> ZipList []
             ZipList (_:xs) -> ZipList xs
+
+data Lift f a = Pure a | Other (f a)
+
+runLift :: (a -> r) -> (f a -> r) -> Lift f a -> r
+runLift pure other = \case { Pure a -> pure a; Other x -> other x }
+
+-- Maybe-like
+instance (Batch Zero f, Batch t f, Fold t) => Batch t (Lift f) where
+    batch f effects = case fold (All . isPure . effects) of
+        All True  -> Pure $ f (fromPure . effects)
+        All False -> Other $ batch f (unLift . effects)
+      where
+        isPure   = runLift (const True) (const False)
+        fromPure = runLift id (error "impossible")
+        unLift   = runLift pure_ id
+
 
 -- | Any monad can be given a sequential 'Batch' instance by running the effects
 -- in sequence and feeding the results to the aggregation function.
