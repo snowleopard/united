@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, QuantifiedConstraints #-}
-{-# LANGUAGE ConstraintKinds, FunctionalDependencies, MultiParamTypeClasses #-}
+{-# LANGUAGE ConstraintKinds, FunctionalDependencies #-}
 {-# LANGUAGE DeriveFunctor, EmptyCase, LambdaCase, GADTs, RankNTypes #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
 -----------------------------------------------------------------------------
@@ -76,15 +76,12 @@ bind x f = match (S toSigma x) (\(Many x) -> f x)
     toSigma a = Sigma (Many a) id
 
 -- Type synonyms for classic type classes:
-type MonadZero f = Match Zero f
-type Functor   f = forall a. Match (One a) f
-type Selective f = forall a b. (Match Zero f, Match (Two a b) f)
-type Bind      f = forall a b. Match (Many a b) f
-type Monad     f = forall a b. (Match Zero f, Match (Many a b) f)
-
--- Constrained versions of type classes, e.g. for "Data.Set".
-type FunctorOrd f = forall a. (Ord a, Match (One a) f)
-type MonadOrd   f = forall a b. (Ord a, Ord b, Match Zero f, Match (Many a b) f)
+-- Stopped working in GHC 8.10?
+-- type MonadZero f = Match Zero f
+-- type Functor   f = forall a. Match (One a) f
+-- type Selective f = forall a b. (Match Zero f, Match (Two a b) f)
+-- type Bind      f = forall a b. Match (Many a b) f
+-- type Monad     f = forall a b. (Match Zero f, Match (Many a b) f)
 
 ----------------------------------- Instances ----------------------------------
 

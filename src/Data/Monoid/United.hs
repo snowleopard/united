@@ -4,7 +4,7 @@ module Data.Monoid.United where
 
 import Algebra.Graph (Graph, vertex)
 import Data.Functor
-import Data.List
+import Data.List (intercalate, sort)
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.String

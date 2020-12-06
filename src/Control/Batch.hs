@@ -115,11 +115,12 @@ mfix_ :: Batch (Many a a) f => (a -> f a) -> f a
 mfix_ f = batch (\lookup -> fix (lookup . Many)) (\(Many a) -> f a)
 
 -- Type synonyms for classic type classes:
-type Pointed_     f = Batch Zero f
-type Functor_     f = forall a. Batch (One a) f
-type Applicative_ f = forall a b. (Batch Zero f, Batch (One a) f, Batch (Two a b) f)
-type Apply_       f = forall a b. (Batch (One a) f, Batch (Two a b) f)
-type MonadFix_    f = forall a. Batch (Many a a) f
+-- Stopped working in GHC 8.10?
+-- type Pointed     f = Batch Zero f
+-- type Functor     f = forall a. Batch (One a) f
+-- type Applicative f = forall a b. (Batch Zero f, Batch (One a) f, Batch (Two a b) f)
+-- type Apply       f = forall a b. (Batch (One a) f, Batch (Two a b) f)
+-- type MonadFix    f = forall a. Batch (Many a a) f
 
 ----------------------------------- Instances ----------------------------------
 instance Batch t Proxy where
@@ -129,7 +130,7 @@ instance Batch t Identity where
     batch f effects = Identity $ f (runIdentity . effects)
 
 instance Batch t ((->) env) where
-    batch f effects = \env -> f (\t -> effects t env)
+    batch f effects = \env -> f (`effects` env)
 
 instance (Batch t f, Batch t g) => Batch t (Product f g) where
     batch f effects = Pair (batch f $ fst . effects) (batch f $ snd . effects)
@@ -187,7 +188,6 @@ instance (Batch Zero f, Batch t f, Fold t) => Batch t (Lift f) where
         isPure   = runLift (const True) (const False)
         fromPure = runLift id (error "impossible")
         unLift   = runLift pure_ id
-
 
 -- | Any monad can be given a sequential 'Batch' instance by running the effects
 -- in sequence and feeding the results to the aggregation function.

@@ -78,7 +78,7 @@ toSet :: U e a -> Set a
 toSet = first (const ())
 
 toGraph :: (e -> Bool) -> U e a -> Graph a
-toGraph p = first p
+toGraph = first
 
 size :: U e a -> Int
 size = fold 0 (const 1) (const (+))
