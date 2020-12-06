@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, FlexibleInstances, QuantifiedConstraints #-}
-{-# LANGUAGE ConstraintKinds, FunctionalDependencies, MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveFunctor, DeriveTraversable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ConstraintKinds, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveTraversable, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables, EmptyCase, LambdaCase, GADTs, RankNTypes #-}
 -----------------------------------------------------------------------------
 -- |

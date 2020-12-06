@@ -73,7 +73,7 @@ foldc n t b = go
       Tip a     -> t a
       Bin e x y -> b e (go x) (go y)
       Let arr x -> let cache = fmap go arr
-                   in foldc n (either ((!) cache) t) b x
+                   in foldc n (either (cache !) t) b x
 
 type Maybe a = U Void a
 type Set   a = U ()   a
@@ -98,7 +98,7 @@ toSet :: U e a -> Set a
 toSet = first (const ())
 
 toGraph :: (e -> Bool) -> U e a -> Graph a
-toGraph p = first p
+toGraph = first
 
 size :: U e a -> Int
 size = foldc 0 (const 1) (const (+))
