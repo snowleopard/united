@@ -1,1 +1,2 @@
-cradle: {stack: {component: "united:lib"}}
+cradle:
+  stack:
