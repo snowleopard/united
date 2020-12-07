@@ -44,7 +44,8 @@ library
 test-suite test
     hs-source-dirs:     examples, test
     other-modules:      Lattice,
-                        Sketch
+                        Sketch,
+                        These
     type:               exitcode-stdio-1.0
     main-is:            Main.hs
     build-depends:      algebraic-graphs,
