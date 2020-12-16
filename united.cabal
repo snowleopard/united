@@ -43,7 +43,8 @@ library
 
 test-suite test
     hs-source-dirs:     examples, test
-    other-modules:      Lattice,
+    other-modules:      Build,
+                        Lattice,
                         Sketch,
                         These
     type:               exitcode-stdio-1.0
