@@ -45,6 +45,7 @@ test-suite test
     hs-source-dirs:     examples, test
     other-modules:      Build,
                         Lattice,
+                        MaxPlus,
                         Sketch,
                         These
     type:               exitcode-stdio-1.0
