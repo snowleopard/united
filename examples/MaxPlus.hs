@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 module MaxPlus where
 
 -- This is an example of a general construction for lifting united monoids
