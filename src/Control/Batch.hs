@@ -1,6 +1,5 @@
-{-# LANGUAGE FlexibleContexts, FlexibleInstances, QuantifiedConstraints #-}
-{-# LANGUAGE ConstraintKinds, MultiParamTypeClasses #-}
-{-# LANGUAGE DeriveTraversable, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE ConstraintKinds, DeriveTraversable, GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables, EmptyCase, LambdaCase, GADTs, RankNTypes #-}
 -----------------------------------------------------------------------------
 -- |
@@ -230,3 +229,62 @@ instance (Applicative f, Enum i) => Batch (Many i a) (Parallel f) where
     batch f effects = runCache f <$> sequenceA (cache effects)
 
 -- ...
+
+---------------------------------- Traversable ---------------------------------
+data V2 a = V2 a a
+
+-- A simple special case of Product: V2 a = Product Identity Identity a
+instance Batch t V2 where
+    batch f effects = V2 (f $ fst . effects) (f $ snd . effects)
+      where
+        fst (V2 x _) = x
+        snd (V2 _ y) = y
+
+-- An equivalent data type, expressed using indexing by Two a a
+type IndexedV2 a = forall x. Two a a x -> x
+
+toIndexedWith :: (a -> f b) -> V2 a -> (Two b b x -> f x)
+toIndexedWith f (V2 x y) = \case { A -> f x; B -> f y }
+
+toIndexed :: V2 (f a) -> (Two a a x -> f x)
+toIndexed = toIndexedWith id
+
+fromIndexed :: (forall x. Two a a x -> x) -> V2 a
+fromIndexed get = V2 (get A) (get B)
+
+sequenceV2 :: Batch (Two a a) f => V2 (f a) -> f (V2 a)
+sequenceV2 v2 = batch fromIndexed (toIndexed v2)
+
+traverseV2 :: Batch (Two b b) f => (a -> f b) -> V2 a -> f (V2 b)
+traverseV2 f v2 = batch fromIndexed (toIndexedWith f v2)
+
+-- With indexed containers, batch id is equivalent to sequence
+sequenceIndexedV2 :: Batch (Two a a) f => (forall x. Two a a x -> f x) -> f (Two a a x -> x)
+sequenceIndexedV2 = batch id
+
+-- In fact, batch id works for any t, as long as we have Batch t f
+sequence_ :: Batch t f => (forall x. t x -> f x) -> f (t x -> x)
+sequence_ = batch id
+
+-- Alas, traverse is not as nice because it involves changing the type of t, in
+-- this case from Two a a to Two b b
+traverseIndexedV2 :: Batch (Two b b) f => (a -> f b) -> (forall x. Two a a x -> x) -> f (Two b b x -> x)
+traverseIndexedV2 f get = batch id (\case { A -> f (get A); B -> f (get B) })
+
+-- We can, however, implement a monomorphic version of traverse
+traverseMono :: Batch t f => (forall x. x -> f x) -> (forall x. t x -> x) -> f (t x -> x)
+traverseMono f get = batch id (f . get)
+
+------------------------------------ BatchPi -----------------------------------
+
+-- A variant of the Batch type class based on an explicit Pi product
+newtype Pi t f = Pi { runPi :: forall x. t x -> f x }
+
+identityPi :: Pi Zero f
+identityPi = Pi (\case {})
+
+class BatchPi t f where
+    batchPi :: Pi t f -> f (Pi t Identity)
+
+unitPi :: (Functor f, BatchPi Zero f) => f ()
+unitPi = () <$ batchPi identityPi
