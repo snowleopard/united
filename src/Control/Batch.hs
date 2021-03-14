@@ -93,7 +93,7 @@ class Batch t f where
     batch :: ((forall x. t x -> x) -> a) -> (forall x. t x -> f x) -> f a
 
 pure_ :: Batch Zero f => a -> f a
-pure_ a = batch (const a) (\(x :: Zero a) -> case x of {})
+pure_ a = batch (\(_ :: forall x. Zero x -> x) -> a) (\case {})
 
 unit :: Batch Zero f => f ()
 unit = pure_ ()
@@ -260,20 +260,21 @@ traverseV2 f v2 = batch fromIndexed (toIndexedWith f v2)
 
 -- With indexed containers, batch id is equivalent to sequence
 sequenceIndexedV2 :: Batch (Two a a) f => (forall x. Two a a x -> f x) -> f (Two a a x -> x)
-sequenceIndexedV2 = batch id
+sequenceIndexedV2 = batch (\get t -> get t)
 
 -- In fact, batch id works for any t, as long as we have Batch t f
 sequence_ :: Batch t f => (forall x. t x -> f x) -> f (t x -> x)
-sequence_ = batch id
+sequence_ = batch (\get t -> get t)
 
 -- Alas, traverse is not as nice because it involves changing the type of t, in
 -- this case from Two a a to Two b b
 traverseIndexedV2 :: Batch (Two b b) f => (a -> f b) -> (forall x. Two a a x -> x) -> f (Two b b x -> x)
-traverseIndexedV2 f get = batch id (\case { A -> f (get A); B -> f (get B) })
+traverseIndexedV2 f get =
+    batch (\get t -> get t) (\case { A -> f (get A); B -> f (get B) })
 
 -- We can, however, implement a monomorphic version of traverse
 traverseMono :: Batch t f => (forall x. x -> f x) -> (forall x. t x -> x) -> f (t x -> x)
-traverseMono f get = batch id (f . get)
+traverseMono f get = batch (\get t -> get t) (f . get)
 
 ------------------------------------ BatchPi -----------------------------------
 
