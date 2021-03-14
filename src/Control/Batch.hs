@@ -111,7 +111,7 @@ mult :: Batch (Two a b) f => f a -> f b -> f (a, b)
 mult = liftA2_ (,)
 
 mfix_ :: Batch (Many a a) f => (a -> f a) -> f a
-mfix_ f = batch (\lookup -> fix (lookup . Many)) (\(Many a) -> f a)
+mfix_ f = batch (\get -> fix (get . Many)) (\(Many a) -> f a)
 
 -- Type synonyms for classic type classes:
 -- Stopped working in GHC 8.10?
@@ -137,14 +137,17 @@ instance (Batch t f, Batch t g) => Batch t (Product f g) where
         fst (Pair f _) = f
         snd (Pair _ g) = g
 
+-- Fold t tells us in which order to sequence the effects
 instance (Fold t, Monoid m) => Batch t (Const m) where
     batch _ effects = Const $ fold (getConst . effects)
 
--- Write: a Product of Const and Identity.
+-- Writer is a Product of Const and Identity
 instance (Fold t, Monoid m) => Batch t ((,) m) where
     batch f effects = (fold (fst . effects), f (snd . effects))
 
--- TODO: Get rid of the unsafe 'fromJust'
+-- TODO: Is it possible to get rid of the unsafe fromJust?
+-- In principle, we shouldn't need Fold t here since the order is irrelevant,
+-- however, for an uncountable t, batch will never terminate anyway
 instance Fold t => Batch t Maybe where
     batch f effects = case fold (All . isJust . effects) of
         All True  -> Just $ f (fromJust . effects)
@@ -289,3 +292,77 @@ class BatchPi t f where
 
 unitPi :: (Functor f, BatchPi Zero f) => f ()
 unitPi = () <$ batchPi identityPi
+
+instance BatchPi t Proxy where
+    batchPi _ = Proxy
+
+instance BatchPi t Identity where
+    batchPi (Pi get) = Identity (Pi get)
+
+instance BatchPi t ((->) env) where
+    batchPi (Pi get) = \env -> Pi $ \t -> Identity (get t env)
+
+instance (BatchPi t f, BatchPi t g) => BatchPi t (Product f g) where
+    batchPi (Pi get) = Pair (batchPi $ Pi $ fst . get) (batchPi $ Pi $ snd . get)
+      where
+        fst (Pair f _) = f
+        snd (Pair _ g) = g
+
+-- A variant of the Batch type class based on an explicit Pi product
+newtype Pi2 t f g = Pi2 { runPi2 :: forall x. t x -> f (g x) }
+
+toPi2 :: Pi t (Compose f g) -> Pi2 t f g
+toPi2 (Pi get) = Pi2 (getCompose . get)
+
+identityPi2 :: Pi2 Zero f g
+identityPi2 = Pi2 (\case {})
+
+class BatchPi2 t f where
+    batchPi2 :: Pi2 t f g -> f (Pi t g)
+
+instance BatchPi2 t Proxy where
+    batchPi2 _ = Proxy
+
+instance BatchPi2 t Identity where
+    batchPi2 (Pi2 get) = Identity $ Pi $ runIdentity . get
+
+instance BatchPi2 t ((->) env) where
+    batchPi2 (Pi2 get) = \env -> Pi $ \t -> get t env
+
+instance (Functor f, BatchPi2 t f, BatchPi2 t g) => BatchPi2 t (Compose f g) where
+    batchPi2 (Pi2 get) = Compose $
+        fmap (batchPi2 . toPi2) $ batchPi2 $ Pi2 (fmap Compose . getCompose . get)
+
+
+------------------------------------ BatchKV -----------------------------------
+-- Here @forall x. k x -> v x@ is a key/value map, hence the name
+class BatchKV k f where
+    batchKV :: ((forall x. k x -> v x) -> a) -> (forall x. k x -> f (v x)) -> f a
+
+pureKV :: BatchKV Zero f => a -> f a
+pureKV a = batchKV (\(_ :: forall x. Zero x -> v x) -> a) (\case {})
+
+commuteIdentity :: Functor f => f (Identity a) -> Identity (f a)
+commuteIdentity = Identity . fmap runIdentity
+
+-- Note that we can't get rid of the inner @Identity@ without something like
+-- @commuteIdentity@ above (we don't want the Functor constraint, of course).
+fmapKV :: BatchKV (One a) f => (a -> b) -> f (Identity a) -> f b
+fmapKV f x = batchKV (\get -> f (runIdentity $ get One)) (\One -> x)
+
+instance BatchKV t Proxy where
+    batchKV _ _ = Proxy
+
+instance BatchKV t Identity where
+    batchKV f get = Identity $ f (runIdentity . get)
+
+instance BatchKV t ((->) env) where
+    batchKV f get = \env -> f (`get` env)
+
+assocCompose :: Functor f => Compose f g (h a) -> f (Compose g h a)
+assocCompose = fmap Compose . getCompose
+
+-- The Functor constraint here is merely for @assocCompose@ above
+instance (Functor f, BatchKV t f, BatchKV t g) => BatchKV t (Compose f g) where
+    batchKV f get = Compose $
+        batchKV (\get -> batchKV f (getCompose . get)) (assocCompose . get)
