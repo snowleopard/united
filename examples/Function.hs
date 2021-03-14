@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, RankNTypes, TupleSections, TypeOperators #-}
+{-# LANGUAGE RankNTypes #-}
 module Function where
 
 import Control.Arrow
