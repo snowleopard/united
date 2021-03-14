@@ -280,7 +280,6 @@ traverseMono :: Batch t f => (forall x. x -> f x) -> (forall x. t x -> x) -> f (
 traverseMono f get = batch (\get t -> get t) (f . get)
 
 ------------------------------------ BatchPi -----------------------------------
-
 -- A variant of the Batch type class based on an explicit Pi product
 newtype Pi t f = Pi { runPi :: forall x. t x -> f x }
 
@@ -307,32 +306,6 @@ instance (BatchPi t f, BatchPi t g) => BatchPi t (Product f g) where
       where
         fst (Pair f _) = f
         snd (Pair _ g) = g
-
--- A variant of the Batch type class based on an explicit Pi product
-newtype Pi2 t f g = Pi2 { runPi2 :: forall x. t x -> f (g x) }
-
-toPi2 :: Pi t (Compose f g) -> Pi2 t f g
-toPi2 (Pi get) = Pi2 (getCompose . get)
-
-identityPi2 :: Pi2 Zero f g
-identityPi2 = Pi2 (\case {})
-
-class BatchPi2 t f where
-    batchPi2 :: Pi2 t f g -> f (Pi t g)
-
-instance BatchPi2 t Proxy where
-    batchPi2 _ = Proxy
-
-instance BatchPi2 t Identity where
-    batchPi2 (Pi2 get) = Identity $ Pi $ runIdentity . get
-
-instance BatchPi2 t ((->) env) where
-    batchPi2 (Pi2 get) = \env -> Pi $ \t -> get t env
-
-instance (Functor f, BatchPi2 t f, BatchPi2 t g) => BatchPi2 t (Compose f g) where
-    batchPi2 (Pi2 get) = Compose $
-        fmap (batchPi2 . toPi2) $ batchPi2 $ Pi2 (fmap Compose . getCompose . get)
-
 
 ------------------------------------ BatchKV -----------------------------------
 -- Here @forall x. k x -> v x@ is a key/value map, hence the name
@@ -366,3 +339,29 @@ assocCompose = fmap Compose . getCompose
 instance (Functor f, BatchKV t f, BatchKV t g) => BatchKV t (Compose f g) where
     batchKV f get = Compose $
         batchKV (\get -> batchKV f (getCompose . get)) (assocCompose . get)
+
+----------------------------------- BatchPiKV ----------------------------------
+-- Similar to BatchKV but with explicit Pi products
+newtype Pi2 k f v = Pi2 { runPi2 :: forall x. k x -> f (v x) }
+
+toPi2 :: Pi k (Compose f v) -> Pi2 k f v
+toPi2 (Pi get) = Pi2 (getCompose . get)
+
+identityPi2 :: Pi2 Zero f v
+identityPi2 = Pi2 (\case {})
+
+class BatchPi2 k f where
+    batchPi2 :: Pi2 k f v -> f (Pi k v)
+
+instance BatchPi2 k Proxy where
+    batchPi2 _ = Proxy
+
+instance BatchPi2 k Identity where
+    batchPi2 (Pi2 get) = Identity $ Pi $ runIdentity . get
+
+instance BatchPi2 k ((->) env) where
+    batchPi2 (Pi2 get) = \env -> Pi $ \t -> get t env
+
+instance (Functor f, BatchPi2 k f, BatchPi2 k g) => BatchPi2 k (Compose f g) where
+    batchPi2 (Pi2 get) = Compose $
+        fmap (batchPi2 . toPi2) $ batchPi2 $ Pi2 (assocCompose . get)
