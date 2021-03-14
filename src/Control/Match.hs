@@ -17,6 +17,8 @@ module Control.Match where
 
 import Data.Function
 import Prelude hiding (fmap, pure)
+import Data.Void
+import Data.Functor.Identity
 
 ------------------------------------- Tags -------------------------------------
 -- | A data type defining no tags. Similar to 'Data.Void.Void' but parameterised.
@@ -47,23 +49,33 @@ data Sigma t a where
     Sigma :: t x -> (x -> a) -> Sigma t a
 
 ------------------------------- Match type class -------------------------------
-data Selector f t a where
-    Z :: Selector f Zero a
-    O :: (x -> a) -> Selector f (One x) a
-    S :: (x -> Sigma t a) -> f x -> Selector f t a
-
 -- | Generalisation of various abstractions that select from multiple effects.
 class Match t f where
-    match :: Selector f t a -> (forall x. t x -> f x) -> f a
+    match :: (s -> Sigma t a) -> f s -> (forall x. t x -> f x) -> f a
 
-empty :: Match Zero f => f a
-empty = match Z (\(x :: Zero a) -> case x of {})
+instance Match Zero Identity where
+    match f x _ = case f (runIdentity x) of Sigma zero _ -> case zero of {}
 
-fmap :: Match (One a) f => (a -> b) -> f a -> f b
-fmap f x = match (O f) (\One -> x)
+instance Match Zero [] where
+    match _ _ _ = []
+
+instance Match Zero Maybe where
+    match f s _get = case s of
+        Nothing -> Nothing
+        Just s  -> case f s of Sigma zero _ -> case zero of {}
+
+-- The 0 case is the EmptyCase extension!
+-- 0 :: f Void                  * ()        -> f a
+-- 1 :: f (i -> a)              * f i       -> f a
+-- 2 :: f ((i -> a) + (j -> a)) * f i * f j -> f a
+emptyCase :: Match Zero f => f Void -> f a
+emptyCase x = match absurd x (\(x :: Zero a) -> case x of {})
+
+apply :: Match (One a) f => f (a -> b) -> f a -> f b
+apply f x = match (Sigma One) f (\case One -> x)
 
 branch :: Match (Two (a -> c) (b -> c)) f => f (Either a b) -> f (a -> c) -> f (b -> c) -> f c
-branch x f g = match (S toSigma x) $ \case
+branch x f g = match toSigma x $ \case
     A -> f
     B -> g
   where
@@ -71,14 +83,12 @@ branch x f g = match (S toSigma x) $ \case
     toSigma (Right b) = Sigma B ($b)
 
 bind :: Match (Many a b) f => f a -> (a -> f b) -> f b
-bind x f = match (S toSigma x) (\(Many x) -> f x)
+bind x f = match toSigma x (\(Many x) -> f x)
   where
     toSigma a = Sigma (Many a) id
 
 -- Type synonyms for classic type classes:
 -- Stopped working in GHC 8.10?
--- type MonadZero f = Match Zero f
--- type Functor   f = forall a. Match (One a) f
 -- type Selective f = forall a b. (Match Zero f, Match (Two a b) f)
 -- type Bind      f = forall a b. Match (Many a b) f
 -- type Monad     f = forall a b. (Match Zero f, Match (Many a b) f)
