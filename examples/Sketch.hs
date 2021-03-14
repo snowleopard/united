@@ -172,7 +172,7 @@ decompositionInv = error "TODO"
 -- https://icfp18.sigplan.org/event/icfp-2018-papers-what-you-needa-know-about-yoneda
 
 fromFun :: (a -> b) -> (forall f . Functor f => f a -> f b)
-fromFun = fmap
+fromFun f x = f <$> x
 
 toFun :: (forall f . Functor f => f a -> f b) -> (a -> b)
 toFun h = runIdentity . h . Identity
