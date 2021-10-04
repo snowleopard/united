@@ -187,7 +187,7 @@ follows.
   \item We introduce \emph{united monoids} as an algebraic structure that
   captures the essence of the various studied interpretations of trees
   (\S\ref{sec-united}). We also characterise united monoids with a minimal set
-  of axioms.
+  of axioms and prove a few basic theorems.
 \end{itemize}
 
 \noindent
@@ -487,24 +487,25 @@ of the nodes from \one to \zero, we break the corresponding connection,
 and as a result, a 2-simplex (triangle $\textit{abc}$) falls apart into
 one-dimensional simplices (edges $\textit{ac}$~and~$\textit{bc}$).
 
-When working with simplicial sets, we will extend the requirements on
-interpreting trees with \hcode{fold} by adding the distributivity requirement:
+When working with simplicial sets, we will extend the set of requirements on
+interpreting trees by adding the \emph{containment} (see~\S\ref{sec-united}) and
+distributivity requirements:
 
 \begin{itemize}
     \item Associativity, inherited from~\S\ref{sec-tree}:
           $(a \dia b) \dia c = a \dia (b \dia c)$,
           $(a \arr b) \arr c = a \arr (b \arr c)$;
-    \item Commutativity, inherited from~\S\ref{sec-set}:
-          $a \dia b = b \dia a$;
-    \item Idempotence, inherited from~\S\ref{sec-set}:
-          $a \dia a = a$;
+    \item Commutativity and idempotence, inherited from~\S\ref{sec-set}:
+          $a \dia b = b \dia a$ and $a \dia a = a$;
+    \item Containment (\textbf{\color{darkblue}new!}):
+          $a \arr b = (a \arr b) \dia a \dia b$ (a simplex \emph{contains} its sub-simplices);
     \item Distributivity (\textbf{\color{darkblue}new!}):
           $a \arr (b \dia c) = (a \arr b) \dia (a \arr c)$,
           $(a \dia b) \arr c = (a \arr c) \dia (b \arr c)$.
 \end{itemize}
 
 \noindent
-The new requirement is motivated by the desire to make the trees
+Adding distributivity is motivated by the desire to make the trees
 \code{("a" $\,\hdia\,$ "b") $\,\harr\,$ "c"} and
 \code{("a" $\,\harr\,$ "b") $\,\hdia\,$ ("a" $\,\harr\,$ "c")} mean the same
 simplicial set (the rightmost one above).
@@ -521,8 +522,8 @@ type SimplicialSet a = Set (NonEmpty a)
 \noindent
 Here the inner non-empty lists correspond to simplices, with their vertices
 listed in the connection order. For example, the simplicial set corresponding to
-the tree \code{"a" $\,\harr\,$ "b"} will contain three lists: \code{[a]},
-\code{[b]} and \code{[a,b]}.
+the tree \code{"a" $\,\harr\,$ "b"} will contain three lists, one for each
+contained simplex: \code{[a]}, \code{[b]} and \code{[a,b]}.
 
 \begin{lstlisting}[float,label=lst-simplicial-set,xleftmargin=0pt,caption={
     A basic API for working with simplicial sets represented by trees.
@@ -595,17 +596,17 @@ toSimplicialSet = fold vertex (bool overlay connect)
 \noindent
 Note that \hcode{SimplicialSet} is a rather naive representation for simplicial
 sets. In particular, an $n$-simplex contains $O(2^n)$ sub-simplices of
-lower dimension, and all of them will be included in the outer \hcode{Set}. It
-is possible to improve the representation by storing only maximal simplices, or
-by using suffix trees~\cite{weiner_suffix_trees}. The \hcode{Tree}-based
-representation of simplicial sets is free from this problem: an $n$-simplex can
-be described by an expression of size $O(n)$, as evidenced by the function
-\hcode{simplex} in Listing~\ref{lst-simplicial-set}.
+lower dimension, and all of them will be included in the outer \hcode{Set}. One
+can improve \hcode{SimplicialSet} by detecting and storing only maximal
+simplices or by switching to suffix trees~\cite{weiner_suffix_trees}. Thanks to
+the containment requirement, the \hcode{Tree}-based representation of simplicial
+sets makes it easy to define an $n$-simplex with a compact $O(n)$-size
+expression -- see the function \hcode{simplex} in Listing~\ref{lst-simplicial-set}.
 
-Another advantage of the \hcode{Tree}-based representation is that it is free
-from internal invariants, i.e. any value of \hcode{Tree Bool a} describes a
-valid simplicial set. \hcode{SimplicialSet} does not satisfy this property; for
-example, the set containing lists \code{[a]} and \code{[a,b]} is not a
+A key advantage of the \hcode{Tree}-based representation is that it is free from
+any internal invariants, i.e. any value of \hcode{Tree Bool a} describes a
+(valid) simplicial set. \hcode{SimplicialSet} does not satisfy this property;
+for example, the set with two lists \code{[a]} and \code{[a,b]} is not a
 simplicial set, because the edge $\textit{ab}$ appears in the set without its
 vertex $\textit{b}$.
 
@@ -617,7 +618,7 @@ Graphs can be thought of as simplicial sets that contain only 0-simplices
 pair of sets:
 
 \begin{lstlisting}
-type Graph a = (Set a, Set (a, a)) -- A set of vertices and a set of edges
+type Graph a = (Set a, Set (a, a)) -- The classic pair !$(V, E)$! with invariant !$E\subseteq V\times V$!
 \end{lstlisting}
 
 \noindent
@@ -638,8 +639,8 @@ in~\S\ref{sec-simplicial-set}, we get exactly the algebra of non-empty graphs
 from~\cite{mokhov_alga}. It is therefore not surprising that we can reuse a lot
 of more general functions operating on trees and simplicial sets when
 implementing a part of the API of algebraic graphs -- see
-Listing~\ref{lst-graph}, where \hcode{hasEdge} is the only function that we did
-not reuse.
+Listing~\ref{lst-graph}, where \hcode{hasEdge} is the only new function that we
+needed to implement.
 
 Let us now check that we can fold a \hcode{Tree Bool a} into the corresponding
 \hcode{Graph a} while respecting decomposition. The last step will be identical
@@ -652,8 +653,8 @@ toGraph = fold vertex (bool overlay connect)
 
 \noindent
 All we need to do is adapt \hcode{vertex}, \hcode{overlay} and \hcode{connect}
-to ``truncated'' simplicial sets. The ``truncated'' variants of \hcode{vertex}
-and \hcode{overlay} are straightforward:
+to ``truncated'' simplicial sets. The truncated variants of \hcode{vertex} and
+\hcode{overlay} are straightforward:
 
 \begin{lstlisting}
 vertex :: a -> Graph a
@@ -685,7 +686,8 @@ v_1 \cup v_2 \cup v_3 = (v_1 \cup v_2) \cup (v_1 \cup v_3) \cup (v_2 \cup v_3)
 
 \noindent
 As for the edge set, one can mechanically check that both sides of the
-decomposition requirement evaluate to the following symmetric expression.
+decomposition law evaluate to the following expression when
+\code{($\hdia$)}~$=$~\hcode{overlay} and \code{($\harr$)}~$=$~\hcode{connect}.
 
 \vspace{-5mm}
 \begin{equation*}
@@ -755,7 +757,7 @@ induce = Tree.filter
 hasVertex :: Eq a => a -> TGraph a -> Bool
 hasVertex = SimplicialSet.hasVertex
 
-hasEdge :: Ord a => a -> a -> TGraph a -> Bool --
+hasEdge :: Ord a => a -> a -> TGraph a -> Bool
 hasEdge x y = maybe False (elem (x,y) . edgeSet) . induce (\a -> a == x || a == y)
 !\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
@@ -813,7 +815,10 @@ a \xrightarrow{x} b\ \dia\ b \xrightarrow{y} c\ \dia\ a \xrightarrow{x \mul y} c
 One can notice that this rule is reminiscent of the relaxation step in various
 shortest-path finding algorithms, where a distance between two vertices $a$ and
 $c$ is updated after discovering a transitive route via a vertex $b$ (recall
-that in semirings~\mul~is used for sequential composition of distances).
+that in semirings~\mul~is used for sequential composition of generalised
+distances).
+
+% We need parallel composition too!
 
 One way to interpret trees and meet the reflexivity and transitivity
 requirements is to use the Floyd-Warshall-Kleene
@@ -823,36 +828,51 @@ implementation is available in the Appendix.
 \section{Edge-labelled graphs}\label{sec-labelled}
 
 Armed with the notation from the previous section~\S\ref{sec-preorder}, we can
-now use our little tree language to describe graphs whose edges are labelled
-with values from an arbitrary semiring \hcode{s}. For example, the expression
+use our tree language to describe graphs whose edges are labelled with values
+from an arbitrary semiring. For example, the expression
 $\text{\code{"a"}} \xrightarrow{\one} \text{\code{"b"}}\ \dia\ \text{\code{"b"}} \xrightarrow{\two} \text{\code{"c"}}$
-will correspond to the graph below.
+corresponds to the graph below.
 
 \vspace{2mm}
 \hfill\includesvg[scale=0.28]{labelled-graph-example}\hfill
 \vspace{3mm}
 
 \noindent
-To translate the shortcut notation to Haskell, we define the following two
-operators:
+In Haskell, we can encode this as
+\code{"a"}~\code{-<1>-}~\code{"b"}~\hdia~\code{"b"}~\code{-<2>-}~\code{"c"}
+by defining a pseudo-ternary operator via two auxiliary binary operators
+\code{-<} and \code{>-}:
 
 \begin{lstlisting}
-(-<) :: Tree s a -> s -> (Tree s a, s)
-x -< s = (x, s)
-!\vspace{-1mm}!
-(>-) :: (Tree s a, s) -> Tree s a -> Tree s a
-(x, s) >- y = node s x y
+(-<) :: Tree s a -> s -> (Tree s a, s)  !$\hspace{8mm}\vrule\hspace{8mm}$!(>-) :: (Tree s a, s) -> Tree s a -> Tree s a
+x -< s = (x, s)                         !$\hspace{39.66mm}\vrule\hspace{8mm}$!(x, s) >- y = node s x y
 \end{lstlisting}
 
 \noindent
-This allows us to write the above example as
-\code{"a"}~\code{-<1>-}~\code{"b"}~\hdia~\code{"b"}~\code{-<2>-}~\code{"c"}.
+To give meaning to parallel composition of edges, we add a new folding requirement:
 
-\newpage
+\begin{itemize}
+    \item Parallel composition of edge labels:
+    $a \xrightarrow{x} b\ \dia\ a \xrightarrow{y} b = a \xrightarrow{x \add y} b$.
+\end{itemize}
+
 \noindent
-We will interpret such tree expressions into the following data type of
-edge-labelled graphs, which maps vertices \hcode{a} to a collection of
-\hcode{s}-labelled outgoing edges.
+Note that containment~(\S\ref{sec-simplicial-set}) is just a special case of
+this new, more general requirement:
+
+\vspace{-5mm}
+\begin{equation*}
+a \arr b\ \dia\ a\ \dia\ b = a \xrightarrow{\one} b\ \dia\ a \xrightarrow{\zero} b = a \xrightarrow{\one\ \raisebox{0.15mm}{\add}\ \zero} b = a \xrightarrow{\one} b = a \arr b.
+\end{equation*}
+\vspace{-5mm}
+
+\noindent
+With the parallel composition rule in place, we can interpret \hcode{Tree}
+expressions into the following ``flat'' representation of edge-labelled graphs,
+which maps vertices \hcode{a} to a collection of \hcode{s}-labelled outgoing
+edges.
+
+% Can't use Set (a, s, a) for edges: parallel composition can't be easily enforced
 
 \begin{lstlisting}
 type LGraph s a = Map a (Map a s)
@@ -866,7 +886,7 @@ vertex :: a -> LGraph s a
 vertex x = Map.singleton x Map.empty
 
 overlay :: (Ord a, Semiring s) => LGraph s a -> LGraph s a -> LGraph s a
-overlay = Map.unionWith (Map.unionWith (!\h{\hadd}!)) -- Combine parallel edge labels with !\h{\hadd}!
+overlay = Map.unionWith (Map.unionWith (!\h{\hadd}!)) -- Parallel composition of edge labels
 \end{lstlisting}
 
 \noindent
@@ -948,7 +968,7 @@ the semiring become equal to \zero too, as demonstrated below.
 \begin{array}{rcll}
 a & = & \one\ \mul\ a & \text{(unit of $\mul$)}\\
  & = & \zero\ \mul\ a & \text{(we postulate \zero = \one)}\\
- & = & \zero & \text{(annihilating \zero)}
+ & = & \zero & \text{(zero of $\mul$)}
 \end{array}
 \end{equation*}
 \vspace{-3mm}
@@ -967,7 +987,7 @@ same catastrophe, albeit in a different manner:
 a & = & 1\ \wedge\ a & \text{(unit of $\wedge$)}\\
  & = & 1\ \wedge\ (0\  \vee\  a) & \text{(unit of $\vee$)}\\
  & = & 0\ \wedge\ (0\  \vee\  a) & \text{(we postulate 0 = 1)}\\
- & = & 0 & \text{(absorption axiom)}
+ & = & 0 & \text{(absorption)}
 \end{array}
 \end{equation*}
 \vspace{-3mm}
@@ -987,8 +1007,8 @@ commutative and $\cdot$ distributes over $+$. We call these monoids
 \emph{united} if $0 = 1$. To avoid confusion with semirings and lattices, we
 will use $\varepsilon$ to denote the unit element of both monoids, that is,
 $a + \varepsilon = a \cdot \varepsilon = a$. Note: we will often omit the
-operator $\cdot$ and write simply $ab$ instead of $a \cdot b$, which is a usual
-convention. We will further refer to $\varepsilon$ as \emph{empty}, the
+operator $\cdot$ and write simply $\textit{ab}$ instead of $a \cdot b$, which is
+a usual convention. We will further refer to $\varepsilon$ as \emph{empty}, the
 operation~$+$ as \emph{overlay}, and the operation~$\cdot$ as \emph{connect}.
 
 \newpage
@@ -1011,17 +1031,18 @@ a + a & = & a\varepsilon\ +\ a\varepsilon & \text{(unit of $\cdot$)}\\
 This means $(S, +, \varepsilon)$ is a commutative idempotent monoid, i.e.,
 a \emph{bounded semilattice}.
 
-The next property of united monoids is more unusual:
-$ab = ab + a = ab + b = ab + a + b$. We call these equalities the \emph{containment laws}:
-intuitively, when you connect $a$ and $b$, the constituent parts are contained
-in the result $ab$. Let us prove containment:
+The next property of is more unusual:
+$\textit{ab} = \textit{ab} + a = \textit{ab} + b = \textit{ab} + a + b$. We
+call these equalities the \emph{containment laws}: intuitively, when you
+connect $a$ and $b$, the constituent parts are contained in the result
+$\textit{ab}$. Let us prove containment:
 
 \vspace{-5mm}
 \begin{equation*}
 \begin{array}{rcll}
-ab\ +\ a & = & ab\ +\ a\varepsilon & \text{(unit of $\cdot$)}\\
+\textit{ab}\ +\ a & = & \textit{ab}\ +\ a\varepsilon & \text{(unit of $\cdot$)}\\
  & = & a(b\ +\ \varepsilon) & \text{(distributivity)}\\
- & = & ab & \text{(unit of $+$)}\\
+ & = & \textit{ab} & \text{(unit of $+$)}\\
 \end{array}
 \end{equation*}
 \vspace{-3mm}
@@ -1030,8 +1051,8 @@ ab\ +\ a & = & ab\ +\ a\varepsilon & \text{(unit of $\cdot$)}\\
 The two other laws are proved analogously (in fact, they are equivalent to each
 other).
 
-Surprisingly, the containment law $ab = ab + a$ is equivalent to $0 = 1$, i.e.,
-the latter can be proved from the former:
+Surprisingly, the containment law $\textit{ab} = \textit{ab} + a$ is equivalent
+to $0 = 1$, i.e., the latter can be proved from the former:
 
 \vspace{-5mm}
 \begin{equation*}
@@ -1046,9 +1067,9 @@ the latter can be proved from the former:
 
 \noindent
 This means that united monoids can be equivalently characterised by the
-containment laws, which makes it possible to talk about
-\emph{united semigroups}. The term ``united semigroup'' may sound somewhat
-nonsensically (because semigroups have no ``units''), however, note that if they
+containment laws, which makes it possible to also talk about
+\emph{united semigroups}. The term ``united semigroup'' may seem somewhat
+nonsensical (semigroups have no ``units'' after all), however, note that if they
 secretly had unit elements, they would have to coincide.
 
 In the same manner, the containment laws imply that zeroes of the two operations
@@ -1066,9 +1087,27 @@ z^{+} & = & z^{\cdot}\ +\ z^{+} & \text{($z^{+}$ is a zero of $+$)}\\
 \end{equation*}
 \vspace{-3mm}
 
-% \noindent
-% Finally, let us prove another unusual property of united monoids: non-empty
-% elements of $S$ can have no inverses. More precisely:
+\noindent
+Finally, let us prove another unusual property of united monoids: overlay and
+connect can have no inverses with respect to $\varepsilon$. That is: if
+$a + b = \varepsilon$ or $\textit{ab} = \varepsilon$ then $a = b = \varepsilon$.
+
+\vspace{-5mm}
+\begin{equation*}
+\begin{array}{rcllcrcll}
+a & = & a + \varepsilon & \text{(unit of $+$)} & \vrule & a & = & a + \varepsilon & \text{(unit of $+$)}\\
+ & = & a + a + b & \text{(assumption $a + b = \varepsilon$)}& \vrule &  & = & a + \textit{ab} & \text{(assumption $\textit{ab} = \varepsilon$)} \\
+ & = & a + b & \text{(idempotence of $+$)}& \vrule & & = & \textit{ab} & \text{(containment)} \\
+ & = & \varepsilon & \text{(assumption $a + b = \varepsilon$)}& \vrule & & = & \varepsilon & \text{(assumption $\textit{ab} = \varepsilon$)}
+\end{array}
+\end{equation*}
+\vspace{-3mm}
+
+\noindent
+Therefore, it is not possible to extend united monoids to ring- or field-like
+structures with inverses.
+
+% It is time to look at some examples of united monoids.
 
 \subsection{Examples from this paper}
 
@@ -1076,23 +1115,25 @@ The containment laws should have reminded you about simplicial sets since
 the latter are closed in terms of containment. For example, a filled-in triangle
 contains its edges and vertices, and it cannot appear in a simplicial set
 without any of them. This property can be expressed algebraically as:
-$abc = abc + ab + ac + bc + a + b + c$. Interestingly, this ``3D'' containment
-law follows from the ``2D'' version for united monoids:
+$\textit{abc} = \textit{abc} + \textit{ab} + \textit{ac} + \textit{bc} + a + b + c$.
+Interestingly, this ``3D'' containment law follows from the ``2D'' version for
+united monoids:
 
 \vspace{-5mm}
 \begin{equation*}
 \begin{array}{rcll}
-abc & = & (ab + a + b)c & \text{(containment)}\\
- & = & (ab)c + ac + bc & \text{(distributivity)}\\
- & = & (abc + ab + c) + (ac + a) + (bc + b) & \text{(containment)}\\
- & = & abc + ab + ac + bc + a + b + c & \text{(commutativity)}
+\textit{abc} & = & (\textit{ab} + a + b)c & \text{(containment)}\\
+ & = & (\textit{ab})c + \textit{ac} + \textit{bc} & \text{(distributivity)}\\
+ & = & (\textit{abc} + \textit{ab} + c) + (\textit{ac} + a) + (\textit{bc} + b) & \text{(containment)}\\
+ & = & \textit{abc} + \textit{ab} + \textit{ac} + \textit{bc} + a + b + c & \text{(commutativity)}
 \end{array}
 \end{equation*}
 \vspace{-3mm}
 
 \noindent
 We can similarly prove higher-dimensional versions of the containment law; they
-all follow from the basic law $ab = ab + a$, or, alternatively, from $0 = 1$.
+all follow from the basic law $\textit{ab} = \textit{ab} + a$, or,
+alternatively, from $0 = 1$.
 
 Graphs, preorders and edge-labelled graphs also satisfy the containment laws.
 In this paper we focused on non-empty structures, which is why we didn't come
@@ -1103,13 +1144,11 @@ structures with the unit \hcode{Nothing}.
 It is worth remarking on the two remaining cases: sets and edge-labelled graphs.
 When working with sets, we had only one operator \hdia, which was caused by the
 fact that we used a trivial semiring with \zero~$=$~\one. One can think of this
-case as \hdia~being a monoid united with itself.
-
-The case of edge-labelled graphs is more interesting. There we had as many
-operations as there were elements in the edge label semiring~\hcode{s}. It turns
-out that every operation $\xrightarrow{x}$ where $x$ is non-zero is united with
-\hdia. In other words, edge-labelled graphs are a
-\emph{semiring of united monoids}.
+case as \hdia~being a monoid united with itself. The case of edge-labelled
+graphs is more interesting. There we had as many operations as there were
+elements in the edge label semiring~\hcode{s}. It turns out that every operation
+$\xrightarrow{x}$ is united with \hdia. In other words, edge-labelled graphs
+form a \emph{semiring of united monoids}.
 
 \subsection{Other examples}
 
@@ -1123,13 +1162,13 @@ are:
     and $b$ composed in parallel is defined to be the maximum of their execution
     times:
     \[
-    \textit{time}(a\ \text{\code{|}}\ b) = \max(\textit{time}(a),\ \textit{time}(b))
+    \text{\hcode{time}}(a\ \text{\code{|}}\ b) = \max(\text{\hcode{time}}(a),\ \text{\hcode{time}}(b))
     \]
 
     \item $(\mathbb{Z}^{\ge 0}, +, 0)$: the execution time of programs $a$ and
     $b$ composed in sequence is defined to be the sum of their execution times:
     \[
-    \textit{time}(a\ \text{\code{;}}\ b) = \textit{time}(a) + \textit{time}(b)
+    \text{\hcode{time}}(a\ \text{\code{;}}\ b) = \text{\hcode{time}}(a) + \text{\hcode{time}}(b)
     \]
 \end{itemize}
 
@@ -1141,68 +1180,95 @@ Note that the resulting algebraic structure is different from the tropical
 max-plus semiring $(\mathbb{R}^{-\infty}, \max, -\infty, +, 0)$ commonly used in
 scheduling, where the unit of $\max$ is $-\infty$ but the unit of $+$ is $0$.
 
+\noindent
 Interestingly, parallel and sequential composition of programs also forms a
 united monoid, where the empty program is the unit. One can therefore call the
-cost model function $\textit{time}$ a \emph{united monoid homomorphism}.
-A related example can be found in~\cite{beaumont2017concepts}, where
-asynchronous circuit specifications are composed in parallel and sequentially,
-using graphs labelled with Boolean predicates.
+cost model function $\text{\hcode{time}}$ a \emph{united monoid
+homomorphism\footnote{
+    A \emph{homomorphism} is a structure-preserving map between two algebraic
+    structures.
+}}. A related example can be found in~\cite{beaumont2017concepts}, where
+asynchronous circuit specifications are composed in parallel and in sequence,
+using graphs labelled with the semiring of Boolean predicates.
 
+% Naturally ordered
+% Use trees/united monoids for modelling parallel/sequential composition
 % What about tries?
 % Equivalence classes?
 % Languages
 
-\newpage
 \section{Related work}\label{sec-related-work}
+
 This paper continues the research on \emph{algebraic graphs} started
 in~\cite{mokhov_alga}. Since their introduction, algebraic graphs have been
-implemented in several languages (including Agda, Fsharp, PureScript, Scala,
-TypeScript, and R) and found application in industry, e.g. in GitHub's static
-code analysis project Semantic~\cite{semantic_paper}\cite{semantic_repo}.
+implemented in several languages (including Agda, Fsharp, Haskell, PureScript,
+Scala, TypeScript, and R) and found applications in industry, e.g., in GitHub's
+static program analysis library Semantic~\cite{semantic_paper}\cite{semantic_repo}.
 In this paper we further distill the essence of the algebraic approach to
-working with graphs by simplifying the graph data type from four to just two
-constructors, i.e., switching to using binary trees parameterised by a semiring.
-One of the main limitations of the work on algebraic graphs was the lack of
-edge labels and this paper successfully addresses it.
+working with graphs by replacing the data type
 
-Other popular approaches for representing graphs in functional programming
-languages can be found in~\cite{1995_king_graphs}\cite{1994_launchbury_st}
-(adjacency arrays, available from the \textsf{containers} library)
-and~\cite{2001_erwig_inductive} (so-called \emph{inductive graphs} where a graph
-is decomposed into a \emph{context}, i.e., a node with its neighbourhood, and
-the rest of the graph).
+\begin{lstlisting}[basicstyle=\sffamily\smaller]
+data Graph a = Empty | Vertex a | Overlay (Graph a) (Graph a) | Connect (Graph a) (Graph a)
+\end{lstlisting}
+
+\noindent
+with binary trees parameterised by a semiring. We remove the \hcode{Empty}
+constructor to make it possible to distinguish non-empty structures at the
+type level and also to keep expressions free from redundant empty leaves. By
+merging the \hcode{Overlay} and \hcode{Connect} constructors into a single
+\hcode{Node} parameterised by a semiring, we get a more general data structure.
+This allows us to resolve one of the main limitations of the work
+in~\cite{mokhov_alga}, which was the lack of support for edge labels.
+
+Two other popular approaches for representing graphs in functional programming
+languages were developed by King and Launchbury~\cite{1995_king_graphs}
+(based on adjacency lists, available from the \code{containers} library)
+and Erwig~\cite{2001_erwig_inductive} (based on \emph{inductive graphs}, where
+graphs can be decomposed into a \emph{context}, i.e., a vertex with its
+neighbourhood, and the rest of the graph). These and other classic graph
+representations can be obtained from our tree expressions via folding. Note
+that, as we remarked in~\S\ref{sec-simplicial-set}, folding a tree expression
+into a ``flat'' graph representation too early can be undesirable because of the
+loss of compactness and the need to maintain various correctness invariants.
+
+% Add a note to the section on graphs about the invariant
 
 Using semirings as a general framework for solving problems on graphs is, of
 course, not new. Dolan's ``Fun with Semirings''~\cite{2013_semirings_dolan} is a
-notable example from the functional programming community, which motivated the
-author to apply semirings in the context of algebraic graphs. A more recent
-example~\cite{weighted_search} uses semirings for generalising algorithms for
-weighted search.
+notable example of parameterising matrices with semirings, which motivated the
+author of this paper to apply semirings in the context of algebraic graphs. In
+a more recent work, Kidney and Wu~\cite{weighted_search} use semirings for
+generalising algorithms for weighted search on graphs represented by functions
+from vertices to their neighbours.
 
-% This paper does not discuss any algorithms
+% Brent's sparks: https://byorgey.wordpress.com/2018/10/01/monoidal-sparks/
+% Two monoid products: direct and sparked are monoids with the same identity
 
-Jeremy Gibbons defines operations \code{above} and \code{beside} for composing
-directed acyclic graphs~\cite{1995_gibbons_algebra}. They both have the same
-unit (the empty graph) but the operation \code{beside} is defined only for
-graphs of matching types. One can therefore consider this as an example of a
-\emph{partial united monoid}. Another similar example is~\cite{typed_matrices},
-where compatible matrices can be composed vertically or horizontally with the
-empty matrix being the common unit.
+
+Jeremy Gibbons defines operations \hcode{above} and \hcode{beside} for composing
+directed acyclic graphs~\cite{1995_gibbons_algebra}. They have the same unit
+(the empty graph) but the operation \hcode{beside} is defined only for graphs of
+matching types. One can therefore think of \hcode{above} and \hcode{beside} as
+\emph{partial united monoids} or \emph{united categories}. Similarly, Santos and
+Oliveira~\cite{typed_matrices} show how to compose type-compatible matrices
+vertically and horizontally using the operations \hcode{fork} and \hcode{join},
+respectively, whose common unit is the empty matrix.
 
 Various flavours of parallel and sequential composition often form united
-monoids. In a paper on Concurrent Kleene Algebra~\cite{hoare2011concurrent},
-the authors use the term ``bimonoid'' to refer to such structures (without
+monoids. In the paper on Concurrent Kleene Algebra~\cite{hoare2011concurrent},
+Hoare et al. use the term ``bimonoid'' to refer to such structures (without
 investigating them in detail). In category theory, ``bimonoid'' is used for an
 unrelated concept (a structure with a monoid and a
 comonoid~\cite{porst_bimonoids}), hence our decision to use the term
-``united monoids'', which appears to be unused and also more specific.
+``united monoids'', which appears to be unused and is also more specific
+compared to ``bimonoid''.
 
-Rivas and Jaskelioff discuss various notions of computation as monoids in the
-category of endofunctors~\cite{rivas_jaskelioff_2017}. Two of these monoids,
-namely \hcode{Applicative} and \hcode{Monad}, turn out to have the same unit
-\hcode{pure = return}, and they can therefore be considered \emph{united monoids
-in the category of endofunctors}. Investigating categorical equivalents of
-the presented ideas remains an interesting direction of future work.
+Rivas and Jaskelioff discuss various notions of computation viewing them as
+monoids in the category of endofunctors~\cite{rivas_jaskelioff_2017}. Two of
+these monoids, namely \hcode{Applicative} and \hcode{Monad}, turn out to have
+the same unit \hcode{pure = return}, and they can therefore be considered
+\emph{united monoids in the category of endofunctors}. Investigating categorical
+equivalents of the presented ideas is an interesting direction of future work.
 
 % \acks
 % I want to thank ....
