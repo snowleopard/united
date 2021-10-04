@@ -108,14 +108,74 @@
 \maketitle
 
 \begin{abstract}
-This paper demonstrates how a simple inductive data type can be used as a
-language for describing and manipulating various combinatorial graph-like
-structures. By changing the rules of interpretation of the language, we will
-obtain sets, preorders, edge-labelled graphs, and simplicial sets.
+% Below is a shorter version of the abstract, which I prefer. Alas, it does not
+% conform to the journal guidelines.
+%
+% =================================
+% This paper demonstrates how a simple inductive data type can be used as a
+% language for describing and manipulating various combinatorial graph-like
+% structures. By changing the rules of interpretation of the language, we will
+% obtain sets, preorders, edge-labelled graphs, and simplicial sets.
+%
+% As a theoretical contribution, the paper presents united monoids, an algebraic
+% structure that turns out to be a common ground for the graph-like structures
+% discussed in the paper.
+% =================================
 
-As a theoretical contribution, the paper presents united monoids, an algebraic
-structure that turns out to be a common ground for the graph-like structures
-discussed in the paper.
+% Guidelines specify the following structure:
+%
+% Context: What is the broad context of the work? What is the importance of the
+% general research area?
+%
+% Inquiry: What problem or question does the paper address? How has this problem
+% or question been addressed by others (if at all)?
+%
+% Approach: What was done that unveiled new knowledge?
+%
+% Knowledge: What new facts were uncovered? If the research was not results
+% oriented, what new capabilities are enabled by the work?
+%
+% Grounding: What argument, feasibility proof, artifacts, or results and
+% evaluation support this work?
+%
+% Importance: Why does this work matter?
+
+\emph{Context:} Graphs and various graph-like combinatorial structures, such as
+preorders and hypergraphs, are ubiquitous in programming. This paper focuses on
+representing graphs in a purely functional programming language like Haskell.
+There are several existing approaches; one of the most recently developed ones
+is the ``algebraic graphs'' approach (2017). It uses an algebraic data type to
+represent graphs and has attracted users, including from industry, due to its
+emphasis on equational reasoning and making a common class of bugs impossible
+by eliminating internal invariants.
+
+\emph{Inquiry:} The previous formulation of algebraic graphs did not support
+edge labels, which was a serious practical limitation. This paper redesigns the
+main algebraic data type and removes this limitation.
+
+\emph{Approach:} We follow a fairly standard approach of parameterising a data
+structure with a semiring of edge labels. The newly developed data structure is
+both more general and also simpler: the two ways of composing graphs used in the
+original formulation can now be obtained from a single operation by fixing the
+semiring parameter to zero and one, respectively.
+
+\emph{Knowledge:} By analysing the resulting data structure and formulating laws
+for interpreting expressions of the corresponding type, we discover an unusual
+algebraic structure, which we call ``united monoids'', that is, a pair of
+monoids whose unit elements coincide. We believe that it is worth studying
+united monoids in their full generality, going beyond graphs which prompted
+their discovery. To that end, we characterise united monoids with a minimal set
+of axioms, prove a few basic theorems, and discuss several notable examples.
+
+\emph{Grounding}: We validate the presented approach by implementing it in the
+open-source \textsf{algebraic-graphs} library. Our theoretical contributions
+are supported by proofs that are included in the paper itself and are also
+available in a machine-checked artifact.
+
+\emph{Importance:} By extending algebraic graphs with support for edge labels,
+we make them suitable for a much larger class of possible applications. By
+studying united monoids, we provide a theoretical foundation for further
+research in this area.
 \end{abstract}
 
 \section{Introduction}
