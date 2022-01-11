@@ -6,7 +6,7 @@
 
 % Fix broken footnotes
 \makeatletter
-\renewcommand\@makefntext[1]{\leftskip=0.7em\hskip-0.7em\@makefnmark\hspace{1mm}#1}
+\renewcommand\@makefntext[1]{\leftskip=0.7em\hskip-0.75em\@makefnmark\hspace{1mm}#1}
 \makeatother
 \renewcommand{\footnotesize}{\small}
 \setlength{\footnotesep}{3mm}
@@ -37,7 +37,7 @@
   language=Haskell,                  % the language of the code
   morekeywords={ Set, Tree, Leaf, Node, Applicative, fmap, liftA2, bimap, foldMap
                , traverse, mappend, pure, Foldable, Traversable, zero, one
-               , isZero, Semiring, Semigroup, NonEmpty, sconcat, TSet,
+               , Semiring, Semigroup, NonEmpty, sconcat, TSet,
                , SimplicialSet, TSimplicialSet, Graph, TGraph, LGraph
                , Map, IsString, fromString },
   deletekeywords={instance, data, where, class, filter, type, insert, delete, union, map},      % if you want to delete keywords from the given language
@@ -71,8 +71,8 @@
 
 \newcommand{\add}{\text{\raisebox{-0.1mm}{\large $\oplus$}}}
 \newcommand{\mul}{\text{\raisebox{-0.1mm}{\large $\otimes$}}}
-\newcommand{\zero}{\raisebox{-0.2mm}{\textcircled{0}}\xspace}
-\newcommand{\one}{\raisebox{-0.2mm}{\textcircled{1}}\xspace}
+\newcommand{\zero}{\raisebox{-0.2mm}{\textcircled{\textsf{0}}}\xspace}
+\newcommand{\one}{\raisebox{-0.2mm}{\textcircled{\textsf{\hspace{-0.2mm}1}}}\xspace}
 \newcommand{\two}{\raisebox{-0.2mm}{\textcircled{2}}\xspace}
 \newcommand{\dia}{\,\text{\raisebox{-0.3mm}{\Large $\diamond$}}\,}
 \newcommand{\arr}{\,\text{$\rightarrow$}\,}
@@ -87,9 +87,10 @@
 }
 
 \title{United Monoids}
-\subtitle{Finding Simplicial Sets and Labelled Algebraic Graphs on Trees}
-\author{Andrey Mokhov}
-\affiliation{Jane Street}
+\subtitle{Finding Simplicial Sets and Labelled Algebraic Graphs in Trees}
+\author[~]{Andrey Mokhov}
+\affiliation[~]{\hspace{-5.3mm}Jane Street, London, UK}
+\affiliation[~]{\hspace{-5.3mm}Newcastle University, Newcastle upon Tyne, UK}
 
 \keywords{algebra, graphs, functional programming}
 
@@ -155,7 +156,7 @@ main algebraic data type and removes this limitation.
 
 \emph{Approach:} We follow a fairly standard approach of parameterising a data
 structure with a semiring of edge labels. The newly developed data structure is
-both more general and also simpler: the two ways of composing graphs used in the
+both more general and simpler: the two ways of composing graphs used in the
 original formulation can now be obtained from a single operation by fixing the
 semiring parameter to zero and one, respectively.
 
@@ -163,7 +164,7 @@ semiring parameter to zero and one, respectively.
 for interpreting expressions of the corresponding type, we discover an unusual
 algebraic structure, which we call ``united monoids'', that is, a pair of
 monoids whose unit elements coincide. We believe that it is worth studying
-united monoids in their full generality, going beyond graphs which prompted
+united monoids in their full generality, going beyond the graphs which prompted
 their discovery. To that end, we characterise united monoids with a minimal set
 of axioms, prove a few basic theorems, and discuss several notable examples.
 
@@ -185,9 +186,10 @@ Graphs and various graph-like combinatorial structures are ubiquitous in
 programming. There are numerous approaches to representing graphs, from good old
 adjacency matrices~\cite{cormen2009introduction} to categorical graph
 algebras~\cite{2010_selinger_survey}. This paper introduces a new purely
-functional graph representation. It is built on elementary foundations
-(trees and semirings), and provides an expressive language for modelling
-graph-like structures.
+functional graph representation, building on the earlier work on
+\emph{algebraic graphs}~\cite{mokhov_alga}. The new representation is based on
+elementary foundations (trees and semirings), and provides an expressive
+language for modelling graph-like structures.
 
 The following data type of binary trees with \hcode{a}-labelled leaves and
 \hcode{s}-labelled internal nodes will be the main protagonist of our
@@ -220,17 +222,16 @@ it, we can fold the tree into an \code{Int} as follows.
 
 \begin{lstlisting}
 size :: Tree s a -> Int
-size = fold (const 1) (const (+))
+size = fold (\a -> 1) (\s x y -> x + y)
 \end{lstlisting}
 
 \noindent
 Here we ignore the labels of leaves and internal nodes: every leaf is
 interpreted as~$1$, and every internal node simply adds up the sizes of its
-children. In the rest of the paper, we will study much more interesting ways to
-fold trees. In particular, we will see how the very same data type can serve us
-when working with sets, preorders, various flavours of graphs, as well as
-simplicial sets. More specifically, the contributions of this paper are as
-follows.
+children. In the rest of the paper, we will study more interesting ways to fold
+trees. In particular, we will see how the very same data type can serve us when
+working with sets, preorders, various flavours of graphs, and simplicial sets.
+More specifically, our contributions are as follows.
 
 \begin{itemize}
   \item We extend \emph{algebraic graphs}~\cite{mokhov_alga} to support edge
@@ -287,15 +288,15 @@ Semirings give us a basic language for connectivity:
 
 \vspace{-1mm}
 \begin{itemize}
-  \item The lack of any connectivity can be expressed by~\zero; e.g, zero
-        network bandwidth.
+  \item The lack of connectivity is denoted by~\zero. For instance, zero network
+        bandwidth.
   \item Addition~$\add$ is a commutative\footnote{
             An operation $\bullet$ is \emph{commutative} if
             $a \bullet b = b \bullet a$.
-        } operation for combining connections in \emph{parallel}; for example,
-        adding bandwidth of independent network links between two locations.
+        } operation for combining connections in \emph{parallel}; e.g.,
+        selecting the \emph{maximum} bandwidth link between two locations.
   \item Multiplication~$\mul$ is for combining connections in \emph{sequence}.
-        Continuing our example, $\mul$ corresponds to taking the \emph{minimum}
+        Continuing the example, $\mul$ corresponds to taking the \emph{minimum}
         bandwidth of network links on route between two locations.
         Multiplication distributes\footnote{
             \emph{Distributivity} of $\otimes$ over $\oplus$ means
@@ -305,8 +306,8 @@ Semirings give us a basic language for connectivity:
             An element $z$ is a \emph{zero} (or an \emph{annihilating element})
             of an operation $\bullet$ if $z \bullet a = a \bullet z = z$.
         }.
-  \item Finally, \one is used to model either a unit of connectivity or infinite
-        connectivity, depending on the specific semiring. In the bandwidth
+  \item Finally, \one denotes either a unit of connectivity or infinite
+        connectivity, depending on a specific semiring. In the bandwidth
         semiring, we have $\text{\one} = \infty$.
 \end{itemize}
 
@@ -346,11 +347,10 @@ fold leaf node = meaning
     meaning (Node s x y) = node s (meaning x) (meaning y)
 
 class Semiring s where -- In this paper, !\h{s}! in !\h{Tree s a}! is always a !\h{Semiring}!
-    zero !\hspace{2.9mm}!:: s !\hspace{14.9mm}!-- Unit of !\hadd!, zero of !\hmul!
-    isZero :: s -> Bool !\hspace{2.5mm}!-- Testing for zero is often easier than implementing !\h{Eq s}!
-    (!\hadd!) !\hspace{4.45mm}!:: s -> s -> s !\hspace{1.4mm}!-- Associative, commutative
-    one !\hspace{3.65mm}!:: s !\hspace{14.9mm}!-- Unit of !\hmul!
-    (!\hmul!) !\hspace{4.45mm}!:: s -> s -> s !\hspace{1.4mm}!-- Associative, distributes over !\hadd!
+    zero :: s !\hspace{14.9mm}!-- Unit of !\hadd!, zero of !\hmul!
+    (!\hadd!) !\hspace{1.55mm}!:: s -> s -> s !\hspace{1.4mm}!-- Associative, commutative
+    one !\hspace{0.75mm}!:: s !\hspace{14.9mm}!-- Unit of !\hmul!
+    (!\hmul!) !\hspace{1.55mm}!:: s -> s -> s !\hspace{1.4mm}!-- Associative, distributes over !\hadd!
 
 instance Semiring s => Semigroup (Tree s a) where
     (!\hdia!) :: Tree s a -> Tree s a -> Tree s a
@@ -384,31 +384,32 @@ instance IsString a => IsString (Tree s a) where -- This makes !\h{"a"}! a short
 \end{lstlisting}
 
 \begin{lstlisting}[float,label=lst-tree,xleftmargin=0pt,belowskip=-2mm,caption={
-    API for constructing and manipulating trees.
-}]
+    A basic API for constructing and manipulating trees. We use the standard
+    module \code{Data.L}\code{ist.N}\code{onEmpty} for representing non-empty
+    lists, and \code{Data.S}\code{et} for sets.}]
 !\rule[2mm]{\textwidth}{0.4pt}!
 !\vspace{-7mm}!
 leaf :: a -> Tree s a -- A tree with a single leaf
 leaf = Leaf
-!\vspace{-1mm}!
+
 leaves :: Semiring s => NonEmpty a -> Tree s a -- A tree of !\n{``}!disconnected!\n{''}! leaves
 leaves = sconcat . NonEmpty.map Leaf -- Via !\h{Semigroup}!'s !\h{sconcat}!
-!\vspace{-1mm}!
+
 node :: s -> Tree s a -> Tree s a -> Tree s a -- Combine two trees into an !\h{s}!-labelled node
 node = Node
-!\vspace{-1mm}!
+
 size :: Tree s a -> Int -- The number of leaves in a tree
 size = length -- Via !\h{Foldable}!
-!\vspace{-1mm}!
+
 leafSet :: Ord a => Tree s a -> Set a -- The set of leaves of a tree
 leafSet = fold Set.singleton (const Set.union)
-!\vspace{-1mm}!
+
 hasLeaf :: Eq a => a -> Tree s a -> Bool -- Test if a tree contains a leaf !\h{a}!
 hasLeaf = elem -- Via !\h{Foldable}!
-!\vspace{-1mm}!
+
 prune :: Tree s (Maybe a) -> Maybe (Tree s a) -- Prune all leaves labelled with !\h{Nothing}!
 prune = sequence -- Via !\h{Traversable}!
-!\vspace{-1mm}!
+
 filter :: (a -> Bool) -> Tree s a -> Maybe (Tree s a) -- Prune all leaves !\h{a}! with !\h{p a = False}!
 filter p = traverse (\a -> if p a then Just a else Nothing) -- Via !\h{Traversable}!
 !\rule[2mm]{\textwidth}{0.4pt}!
@@ -420,15 +421,15 @@ that, we simply wrap the \hcode{Tree} data type into \hcode{Maybe}. This is
 illustrated by the function \hcode{prune} (Listing~\ref{lst-tree}), which prunes
 all leaves labelled with \hcode{Nothing} and returns a possibly empty tree as a
 result. By combining the empty tree and the operation \dia, we can extend our
-type of trees from a semigroup to a \emph{monoid}, i.e., a semigroup with the
-unit element.
+type of trees from a semigroup to a \emph{monoid}, i.e., a semigroup with a unit
+element.
 
 When tree interpretations respect the associativity of \dia, \zero-labelled
 trees become isomorphic to non-empty lists. This is evidenced by the functions
-\hcode{toList} (from the \hcode{Foldable} type class in
+\hcode{toList} (provided by the \hcode{Foldable} instance in
 Listing~\ref{lst-tree-std}) and \hcode{leaves} (Listing~\ref{lst-tree}). In the
 subsequent sections, we will study data structures obtained by instantiating
-\hcode{Tree s a} with various semirings \hcode{s}, and by adding more
+\hcode{Tree s a} with different semirings~\hcode{s}, and by adding more
 requirements (on top of associativity) to tree interpretations.
 
 \section{Sets}\label{sec-set}
@@ -444,9 +445,6 @@ type TSet a = Tree () a -- We prepend !\h{T}! to avoid a name clash with the sta
 As hinted by the type synonym's name, we will interpret values \hcode{TSet a} as
 (non-empty) sets; to get a standard \hcode{Set a} from a \hcode{TSet a}, we can
 simply reuse \hcode{leafSet} from Listing~\ref{lst-tree}.
-In fact, as demonstrated in Listing~\ref{lst-set}, a large part of the standard
-set API can be be obtained by reusing more general \hcode{Tree}-manipulating
-functions defined earlier in~\S\ref{sec-tree}.
 
 \begin{lstlisting}[label=lst-set,xleftmargin=0pt,belowskip=7pt,caption={
     Implementing a part of the standard \code{Data.S}\code{et} API with
@@ -455,46 +453,46 @@ functions defined earlier in~\S\ref{sec-tree}.
 !\rule[2mm]{\textwidth}{0.4pt}!
 !\vspace{-7mm}!
 type TSet a = Tree () a -- Sets are trees with !\h{()}!-labelled internal nodes
-!\vspace{-1mm}!
+
 instance Semiring () where -- The trivial semiring with !\h{zero = one = ()}!
-    zero !\hspace{6.1mm}!= ()
-    isZero () = True
-    () !\add! () !\hspace{3.55mm}!= ()
-    one !\hspace{7mm}!= ()
-    () !\mul! () !\hspace{3.55mm}!= ()
-!\vspace{-1mm}!
+    zero !\hspace{2.55mm}!= ()
+    () !\add! () = ()
+    one !\hspace{3.55mm}!= ()
+    () !\mul! () = ()
+
 singleton :: a -> TSet a !\hspace{32.18mm}\vrule\hspace{8mm}!insert :: a -> TSet a -> TSet a
 singleton = Tree.leaf    !\hspace{35.1mm}\vrule\hspace{8mm}!insert = (!\hdia!) . singleton -- Via !\h{Semigroup}!
-!\vspace{-1mm}!
-fromList :: [a] -> Maybe (TSet a) -- The empty set is represented by !\h{Nothing}!
-fromList = fmap Tree.leaves . NonEmpty.nonEmpty
-!\vspace{-1mm}!
-delete :: Eq a => a -> TSet a -> Maybe (TSet a) -- The result can be empty
+
+delete :: Eq a => a -> TSet a -> Maybe (TSet a) -- The empty set is represented by !\h{Nothing}!
 delete a = Tree.filter (/= a)
-!\vspace{-1mm}!
+
 member :: Eq a => a -> TSet a -> Bool !\hspace{9.1mm}\vrule\hspace{8mm}!union :: TSet a -> TSet a -> TSet a
 member = Tree.hasLeaf                 !\hspace{30.33mm}\vrule\hspace{8mm}!union = (!\hdia!) -- Via !\h{Semigroup}!
-!\vspace{-1mm}!
+
 size :: Ord a => TSet a -> Int
 size = Set.size . leafSet -- We can't use !\h{Tree.size}! because it uses a non-idempotent !\h{fold}!
-!\vspace{-1mm}!
+
 cartesianProduct :: TSet a -> TSet b -> TSet (a, b)
 cartesianProduct = liftA2 (,) -- Via !\h{Applicative}!
-!\vspace{-1mm}!
+
 filter :: (a -> Bool) -> TSet a -> Maybe (TSet a) -- The result can be empty
 filter = Tree.filter
-!\vspace{-1mm}!
+
 map :: (a -> b) -> TSet a -> TSet b
 map = fmap -- Via !\h{Functor}!
 !\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
 
 \noindent
+Listing~\ref{lst-set} shows how to implement a part of the standard set API by
+reusing the more general \hcode{Tree}-manipulating functions defined earlier
+in~\S\ref{sec-tree}.
+
 In addition to associativity, the set interpretation of trees puts two new
-requirements on every call site \hcode{fold leaf node}\footnote{
-    We should use \hcode{fold} with care since Haskell's type system isn't
-    powerful enough to check such requirements. A dependently typed language,
-    such as Agda~\cite{2007_norell_agda}, could help us here.
+requirements on every call site of \hcode{fold leaf node}\footnote{
+    Haskell's type system isn't powerful enough to check such requirements, so
+    we should use \hcode{fold} with care. A dependently typed language, such as
+    Agda~\cite{2007_norell_agda}, could help us here.
 }:
 
 \begin{itemize}
@@ -515,6 +513,7 @@ indeed, \hcode{Tree.}\code{size ("b" $\,\hdia\,$ "b")}$\ =2$ since the tree has
 since the set described by the tree has only \emph{one element}.
 
 \section{Simplicial sets}\label{sec-simplicial-set}
+\vspace{-1mm}
 
 Describing plain sets with trees isn't new or particularly exciting. However, we
 hope the reader found it instructive to see what happens if we instantiate
@@ -526,50 +525,114 @@ $\mul = \text{\code{(&&)}}$.
 
 A \emph{simplicial set}~\cite{friedman_simplicial_sets} is a set of
 \emph{simplices} of various dimensions along with their incidence relation.
-A \emph{0-simplex} is a just a point, or a \emph{vertex}, and it will correspond
-to a leaf in our trees. A \emph{1-simplex} is a pair of connected vertices, or
-an \emph{edge}; a \emph{2-simplex} is a filled-in \emph{triangle}; a
-\emph{3-simplex} is a solid \emph{tetrahedron}; and so on. To represent
-simplices of dimension higher than $0$, we will \emph{connect} their vertices
-using \one-labelled internal nodes. The figure below shows the simplicial sets
-corresponding to the trees \code{"a"}, \code{"a" $\,\harr\,$ "b"},
-\code{("a" $\,\harr\,$ "b") $\,\harr\,$ "c"} and
-\code{("a" $\,\hdia\,$ "b") $\,\harr\,$ "c"}, where
-\code{($\harr$)}~\code{=}~\hcode{node one} (see Listing~\ref{lst-simplicial-set}).
+A \emph{$0$-simplex} is a just a point, or a \emph{vertex}, and will correspond
+to a leaf in our trees. A \emph{$1$-simplex} is a pair of connected vertices, or
+an \emph{edge}; a \emph{$2$-simplex} is a filled-in \emph{triangle}; a
+\emph{$3$-simplex} is a solid \emph{tetrahedron}; and so on. Simplicial sets
+model systems that cannot be decomposed into pairwise relationships of their
+components. For example, it can be useful to distinguish three truly
+concurrent events from three events that are concurrent pairwise but constrained
+by shared resources~\cite{rosenblum1989look}, e.g., three people eating
+ice-cream with two spoons. The former corresponds to a $2$-simplex, while the
+latter -- to a simplicial set with three $1$-simplices (a hollow triangle).
 
-\vspace{5mm}
+To represent simplices of dimension higher than $0$, we will \emph{connect}
+their vertices using \one-labelled internal nodes. The figure below shows the
+simplicial sets corresponding to the trees
+\code{"a"}, \code{"a" $\,\harr\,$ "b"},
+\code{("a" $\,\harr\,$ "b") $\,\harr\,$ "c"} and
+\code{("a" $\,\hdia\,$ "b") $\,\harr\,$ "c"}, where the operator \code{$\harr$}
+is defined as \hcode{x}~\code{$\harr$}~\hcode{y}~\code{=}~\hcode{node one x y}
+(see Listing~\ref{lst-simplicial-set}).
+
+\vspace{2.5mm}
 \hfill\hspace{-4mm}\includesvg[scale=0.28]{simplicial-set-examples}\hfill
-\vspace{5mm}
+\vspace{2.5mm}
 
 \noindent
-Note the difference between the last two examples: by changing the label of one
+Note the difference between the two last examples: by changing the label of one
 of the nodes from \one to \zero, we break the corresponding connection,
-and as a result, a 2-simplex (triangle $\textit{abc}$) falls apart into
+and as a result, a $2$-simplex (triangle $\textit{abc}$) falls apart into
 one-dimensional simplices (edges $\textit{ac}$~and~$\textit{bc}$).
 
 When working with simplicial sets, we will extend the set of requirements on
 interpreting trees by adding the \emph{containment} (see~\S\ref{sec-united}) and
 distributivity requirements:
 
-\begin{itemize}
+\vspace{-1mm}\begin{itemize}
     \item Associativity, inherited from~\S\ref{sec-tree}:
-          $(a \dia b) \dia c = a \dia (b \dia c)$,
-          $(a \arr b) \arr c = a \arr (b \arr c)$;
-    \item Commutativity and idempotence, inherited from~\S\ref{sec-set}:
-          $a \dia b = b \dia a$ and $a \dia a = a$;
-    \item Containment (\textbf{\color{darkblue}new!}):
-          $a \arr b = (a \arr b) \dia a \dia b$ (a simplex \emph{contains} its sub-simplices);
+
+          \vspace{0.5mm}\hspace{10mm}$(a \dia b) \dia c = a \dia (b \dia c)$~~and~~$(a \arr b) \arr c = a \arr (b \arr c)$;
+
+    \item Commutativity and idempotence of \dia, inherited from~\S\ref{sec-set}:
+
+          \vspace{0.5mm}\hspace{10mm}$a \dia b = b \dia a$~~and~~$a \dia a = a$;
+
+    \item Containment (\textbf{\color{darkblue}new!}), i.e., every simplex
+          \emph{contains} its sub-simplices:
+
+          \vspace{0.5mm}\hspace{10mm}$a \arr b = (a \arr b)\ \dia\ a\ \dia\ b$;
+
     \item Distributivity (\textbf{\color{darkblue}new!}):
-          $a \arr (b \dia c) = (a \arr b) \dia (a \arr c)$,
-          $(a \dia b) \arr c = (a \arr c) \dia (b \arr c)$.
+
+          \vspace{0.5mm}\hspace{10mm}$a \arr (b \dia c) = (a \arr b) \dia (a \arr c)$~~and~~$(a \dia b) \arr c = (a \arr c) \dia (b \arr c)$.
 \end{itemize}
 
 \noindent
 Adding distributivity is motivated by the desire to make the trees
 \code{("a" $\,\hdia\,$ "b") $\,\harr\,$ "c"} and
-\code{("a" $\,\harr\,$ "b") $\,\hdia\,$ ("a" $\,\harr\,$ "c")} mean the same
+\code{("a" $\,\harr\,$ "c") $\,\hdia\,$ ("b" $\,\harr\,$ "c")} mean the same
 simplicial set (the rightmost one above).
 
+\begin{lstlisting}[float,label=lst-simplicial-set,xleftmargin=0pt,caption={
+    A basic API for working with simplicial sets represented by trees.
+}]
+!\rule[2mm]{\textwidth}{0.4pt}!
+!\vspace{-7mm}!
+type TSimplicialSet a = Tree Bool a -- Simplicial sets are trees over the Boolean semiring
+
+instance Semiring Bool where -- The Boolean semiring with !\h{zero = False}! and !\h{one = True}!
+    zero = False
+    (!\hadd!) !\hspace{1.5mm}!= (||)
+    one !\hspace{0.7mm}!= True
+    (!\hmul!) !\hspace{1.5mm}!= (&&)
+
+(!\harr!) :: TSimplicialSet a -> TSimplicialSet a -> TSimplicialSet a
+(!\harr!) = Tree.node one
+
+overlay :: TSimplicialSet a -> TSimplicialSet a -> TSimplicialSet a
+overlay = (!\hdia!) -- Via !\h{Semigroup}!; recall that !\h{(\hdia) = Tree.node zero}!
+
+connect :: TSimplicialSet a -> TSimplicialSet a -> TSimplicialSet a
+connect = (!\harr!)
+
+vertex :: a -> TSimplicialSet a -- 0-simplex
+vertex = Tree.leaf
+
+edge :: a -> a -> TSimplicialSet a -- 1-simplex
+edge x y = connect (vertex x) (vertex y)
+
+triangle :: a -> a -> a -> TSimplicialSet a !\hspace{6.2mm}!-- 2-simplex
+triangle x y z = connect (vertex x) (edge y z) -- Equivalently, !\h{connect (edge x y) (vertex z)}!
+
+simplex :: NonEmpty a -> TSimplicialSet a -- N-simplex
+simplex = foldr1 connect . NonEmpty.map vertex -- Via !\h{Foldable}!
+
+hasVertex :: Eq a => a -> TSimplicialSet a -> Bool
+hasVertex = Tree.hasLeaf
+
+vertexSet :: Ord a => TSimplicialSet a -> Set a
+vertexSet = Tree.leafSet
+
+filter :: (a -> Bool) -> TSimplicialSet a -> Maybe (TSimplicialSet a)
+filter = Tree.filter
+
+map :: (a -> b) -> TSimplicialSet a -> TSimplicialSet b -- The so-called !\n{``}!simplicial map!\n{''}!
+map = fmap -- Via !\h{Functor}!
+!\rule[2mm]{\textwidth}{0.4pt}!
+\end{lstlisting}
+
+\noindent
 Now that we know the rules of interpreting trees over the Boolean semiring, we
 need to choose a target representation for simplicial sets. Alas, there is no
 standard \code{Data.SimplicialS}\code{et}, so we need to come up with our own.
@@ -585,58 +648,8 @@ listed in the connection order. For example, the simplicial set corresponding to
 the tree \code{"a" $\,\harr\,$ "b"} will contain three lists, one for each
 contained simplex: \code{[a]}, \code{[b]} and \code{[a,b]}.
 
-\begin{lstlisting}[float,label=lst-simplicial-set,xleftmargin=0pt,caption={
-    A basic API for working with simplicial sets represented by trees.
-}]
-!\rule[2mm]{\textwidth}{0.4pt}!
-!\vspace{-7mm}!
-type TSimplicialSet a = Tree Bool a -- Simplicial sets are trees over the Boolean semiring
-!\vspace{-1mm}!
-instance Semiring Bool where -- The Boolean semiring with !\h{zero = False}! and !\h{one = True}!
-    zero !\hspace{2.95mm}!= False
-    isZero = not
-    (!\hadd!) !\hspace{4.45mm}!= (||)
-    one !\hspace{3.65mm}!= True
-    (!\hmul!) !\hspace{4.45mm}!= (&&)
-!\vspace{-1mm}!
-(!\harr!) :: TSimplicialSet a -> TSimplicialSet a -> TSimplicialSet a
-(!\harr!) = Tree.node one
-!\vspace{-1mm}!
-overlay :: TSimplicialSet a -> TSimplicialSet a -> TSimplicialSet a
-overlay = (!\hdia!) -- Via !\h{Semigroup}!; recall that !\h{(\hdia) = Tree.node zero}!
-!\vspace{-1mm}!
-connect :: TSimplicialSet a -> TSimplicialSet a -> TSimplicialSet a
-connect = (!\harr!)
-!\vspace{-1mm}!
-vertex :: a -> TSimplicialSet a -- 0-simplex
-vertex = Tree.leaf
-!\vspace{-1mm}!
-edge :: a -> a -> TSimplicialSet a -- 1-simplex
-edge x y = connect (vertex x) (vertex y)
-!\vspace{-1mm}!
-triangle :: a -> a -> a -> TSimplicialSet a -- 2-simplex
-triangle x y z = connect (vertex x) (edge y z)
-!\vspace{-1mm}!
-simplex :: NonEmpty a -> TSimplicialSet a -- N-simplex
-simplex = foldr1 connect . NonEmpty.map vertex -- Via !\h{Foldable}!
-!\vspace{-1mm}!
-hasVertex :: Eq a => a -> TSimplicialSet a -> Bool
-hasVertex = Tree.hasLeaf
-!\vspace{-1mm}!
-vertexSet :: Ord a => TSimplicialSet a -> Set a
-vertexSet = Tree.leafSet
-!\vspace{-1mm}!
-filter :: (a -> Bool) -> TSimplicialSet a -> Maybe (TSimplicialSet a)
-filter = Tree.filter
-!\vspace{-1mm}!
-map :: (a -> b) -> TSimplicialSet a -> TSimplicialSet b -- The so-called !\n{``}!simplicial map!\n{''}!
-map = fmap -- Via !\h{Functor}!
-!\rule[2mm]{\textwidth}{0.4pt}!
-\end{lstlisting}
-
-\noindent
 Now we can define \hcode{vertex}, \hcode{overlay} and \hcode{connect} to
-interpret leaves, as well as \zero-~and \one-labelled nodes, respectively, and
+interpret leaves, \zero-~and \one-labelled nodes, respectively, and
 use them to fold a \hcode{Tree Bool a} into a \hcode{SimplicialSet a}:
 
 \begin{lstlisting}
@@ -650,7 +663,7 @@ connect :: Ord a => SimplicialSet a -> SimplicialSet a -> SimplicialSet a
 connect x y = Set.unions [x, y, Set.map (uncurry (!\hdia!)) (Set.cartesianProduct x y)]
 !\vspace{-1mm}!
 toSimplicialSet :: Ord a => Tree Bool a -> SimplicialSet a
-toSimplicialSet = fold vertex (bool overlay connect)
+toSimplicialSet = fold vertex (\s -> if s then connect else overlay)
 \end{lstlisting}
 
 \noindent
@@ -661,10 +674,11 @@ can improve \hcode{SimplicialSet} by detecting and storing only maximal
 simplices or by switching to suffix trees~\cite{weiner_suffix_trees}. Thanks to
 the containment requirement, the \hcode{Tree}-based representation of simplicial
 sets makes it easy to define an $n$-simplex with a compact $O(n)$-size
-expression -- see the function \hcode{simplex} in Listing~\ref{lst-simplicial-set}.
+expression -- see the function \hcode{simplex} in
+Listing~\ref{lst-simplicial-set}.
 
 A key advantage of the \hcode{Tree}-based representation is that it is free from
-any internal invariants, i.e. any value of \hcode{Tree Bool a} describes a
+any internal invariants, i.e., any value of \hcode{Tree Bool a} describes a
 (valid) simplicial set. \hcode{SimplicialSet} does not satisfy this property;
 for example, the set with two lists \code{[a]} and \code{[a,b]} is not a
 simplicial set, because the edge $\textit{ab}$ appears in the set without its
@@ -673,8 +687,8 @@ vertex $\textit{b}$.
 \vspace{-2mm}
 \section{Graphs}\label{sec-graph}
 
-Graphs can be thought of as simplicial sets that contain only 0-simplices
-(vertices) and 1-simplices (edges). One can therefore represent graphs with a
+Graphs can be thought of as simplicial sets that contain only $0$-simplices
+(vertices) and $1$-simplices (edges). One can therefore represent graphs with a
 pair of sets:
 
 \begin{lstlisting}
@@ -696,19 +710,18 @@ This law is unusual but it is not new: it was introduced as an axiom of
 \emph{algebraic graphs} in~\cite{mokhov_alga}. In fact, by adding this
 requirement to those used when interpreting simplicial sets
 in~\S\ref{sec-simplicial-set}, we get exactly the algebra of non-empty graphs
-from~\cite{mokhov_alga}. It is therefore not surprising that we can reuse a lot
-of more general functions operating on trees and simplicial sets when
-implementing a part of the API of algebraic graphs -- see
-Listing~\ref{lst-graph}, where \hcode{hasEdge} is the only new function that we
-needed to implement.
+from~\cite{mokhov_alga}. It is therefore not surprising that we can reuse more
+general functions operating on trees and simplicial sets when implementing a
+part of the API of algebraic graphs -- see Listing~\ref{lst-graph}, where
+\hcode{hasEdge} is the only new function that we needed to implement.
 
 Let us now check that we can fold a \hcode{Tree Bool a} into the corresponding
 \hcode{Graph a} while respecting decomposition. The last step will be identical
 to the one from~\S\ref{sec-simplicial-set}:
 
 \begin{lstlisting}
-toGraph :: Ord a => TGraph a -> Graph a
-toGraph = fold vertex (bool overlay connect)
+toGraph :: Ord a => Tree Bool a -> Graph a
+toGraph = fold vertex (\s -> if s then connect else overlay)
 \end{lstlisting}
 
 \noindent
@@ -755,37 +768,38 @@ e_1 \cup e_2 \cup e_3 \cup (v_1 \times v_2) \cup (v_1 \times v_3) \cup (v_2 \tim
 \end{equation*}
 \vspace{-5mm}
 
-\subsection{Other kinds of graphs}
+\subsection{Other kinds of graphs}\label{sec-other-graphs}
 
 So far we discussed only directed graphs with no edge labels. One way to support
 other kinds of graphs is to strengthen the tree folding requirements.
 Specifically:
 
 \begin{itemize}
-    \item For \emph{undirected graphs}, the operator $\arr$ needs to be
-    commutative, i.e. $a \arr b = b \arr a$.
-    \item For \emph{reflexive graphs}, the operator $\arr$ needs to be
-    idempotent with respect to single vertices, i.e.
-    \hcode{vertex a}$\arr$\hcode{vertex a}~$=$~\hcode{vertex a}.
-    \item For \emph{bipartite graphs}, the operator $\arr$ should take no
-    effect on vertices from the same part, i.e.
-    $\forall a,b \in (P \times P) \cup (Q \times Q),\ a \arr b = a \dia b$,
-    where $P$ and $Q$ are the two parts of the bipartite graph.
+    \item For \emph{undirected graphs}, $\arr$ must commute for leaves:
+    \hcode{leaf}$~a \arr $\hcode{leaf}~$b =~$\hcode{leaf}$~b \arr $\hcode{leaf}~$a$.
+    Taken with other requirements, this leads to general commutativity
+    $a \arr b = b \arr a$.
+    \item For \emph{reflexive graphs}, $\arr$ must have no effect on leaves:
+    \hcode{leaf}$~a =~$\hcode{leaf}$~a\,\arr\,$\hcode{leaf}~$a$.
+    \item For \emph{bipartite graphs}, $\arr$ must have no effect on leaves
+    corresponding to vertices from the same part. That is,
+    $\forall (a,b) \in (P \times P) \cup (Q \times Q),\ $\hcode{leaf}$~a\,\dia\,$\hcode{leaf}~$b =~$\hcode{leaf}$~a\,\arr\,$\hcode{leaf}~$b$,
+    where $P$~and~$Q$ are the two parts of the bipartite graph.
     \item For \emph{transitively-closed graphs}, see \S\ref{sec-preorder}.
 \end{itemize}
 
 \noindent
-Another approach to support new kinds of graphs is to instantiate
+Another approach to supporting new kinds of graphs is instantiating
 \hcode{Tree s a} with other semirings \hcode{s}. In~\S\ref{sec-labelled}, this
 will allow us to support \emph{edge-labelled graphs}.
 
 \begin{lstlisting}[float,label=lst-graph,xleftmargin=0pt,caption={
     Implementing a part of the \code{Algebra.G}\code{raph} API~\cite{mokhov_alga}
-    with \hcode{TGraph}.
+    with \hcode{Tree Bool a}.
 }]
 !\rule[2mm]{\textwidth}{0.4pt}!
 !\vspace{-7mm}!
-type TGraph a = Tree Bool a -- Plus the !\h{Functor}!, !\h{Applicative}! and !\h{Monad}! instances
+type TGraph a = Tree Bool a -- Graphs are trees over the Boolean semiring
 
 vertex :: a -> TGraph a
 vertex = SimplicialSet.vertex
@@ -818,11 +832,13 @@ hasVertex :: Eq a => a -> TGraph a -> Bool
 hasVertex = SimplicialSet.hasVertex
 
 hasEdge :: Ord a => a -> a -> TGraph a -> Bool
-hasEdge x y = maybe False (elem (x,y) . edgeSet) . induce (\a -> a == x || a == y)
+hasEdge x y graph = case induce (\a -> a == x || a == y) graph of
+    Nothing -> False
+    Just sub -> (x,y) `elem` edgeSet sub -- Here !\h{sub}! can only contain vertices !\h{x}! and !\h{y}!
 !\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
 
-\section{Preorders}\label{sec-preorder}
+\section{Preorders and generalised transitively-closed graphs}\label{sec-preorder}
 
 A \emph{preorder} is a binary relation $\preceq$ that is:
 
@@ -831,103 +847,216 @@ A \emph{preorder} is a binary relation $\preceq$ that is:
     \item \emph{Transitive}: $a \preceq b \wedge b \preceq c \Rightarrow a \preceq c$.
 \end{itemize}
 
+% In this section we will see how to interpret trees as preorders. We will first
+% build on the infrastructure developed for graphs in~\S\ref{sec-graph}, and then
+% discuss a generalisation.
 \noindent
-In this section we will see how to interpret trees as preorders.
-
-\newpage
-\noindent
-We could build directly on top of the infrastructure developed for graphs
-in~\S\ref{sec-graph}, but instead we will generalise our approach and switch to
-a setting with general semirings, i.e., trees of type \hcode{Tree s a} for an
-arbitrary semiring \hcode{s}. This leads us to the following encoding of the
-reflexivity and transitivity requirements:
+As mentioned earlier in~\S\ref{sec-other-graphs}, reflexivity can be expressed
+as a new tree folding requirement, which states that connecting a leaf to itself
+must be redundant:
 
 \begin{itemize}
-    \item Reflexivity: \hcode{node one (leaf a) (leaf a)}~$=$~\hcode{leaf a}. In
-    words, connecting a leaf to itself with a \one-labelled node is redundant.
-    \item Transitivity:
-    \hcode{node x a b}~\hdia~\hcode{node y b c}~\hdia~\hcode{node (x}~\hmul~\hcode{y) a c}~$=$~\hcode{node x a b}~\hdia~\hcode{node y b c}.
-    This ensures that we interpret trees modulo transitivity, i.e., adding or
-    removing a transitive edge \hcode{node (x}~\hmul~\hcode{y) a c} to a tree
-    expression should not matter.
+    \item Reflexivity:
+    \hcode{leaf}$~a =~$\hcode{leaf}$~a\,\arr\,$\hcode{leaf}~$a$.
 \end{itemize}
 
 \noindent
-To make expressions involving trees over general semirings clearer, we introduce
-the following notation:
+To ensure that preorder expressions are interpreted
+``modulo transitive connections'', we also add the following transitivity
+requirement. It states that adding/removing a transitive connection $a \arr c$
+to/from the tree $a \arr b \dia b \arr c$ must be redundant:
+
+\begin{itemize}
+    \item Transitivity: $a \arr b\ \dia\ b \arr c = a \arr b\ \dia\ b \arr c\ \dia\ a \arr c$.
+\end{itemize}
+
+% or $a \arr b\ \dia\ b \arr c = a \arr b \arr c$
+% Note that the alternative (second) definition makes use of the decomposition
+% law.
+\noindent
+Reading the reflexivity and transitivity requirements from left to right, one
+can think of them as introducing the preorder terms $a \preceq a$ and
+$a \preceq c$ under suitable assumptions.
+% Conversely, reading the requirements from right to left corresponds to
+% eliminating the terms $a \preceq a$ and $a \preceq c$, or simplifying them away.
+
+We can generalise this approach to trees of type \hcode{Tree s a} where
+\hcode{s} is an arbitrary semiring. For clarity, let us adopt the following
+shorthand notation:
 
 \vspace{-5mm}
 \begin{equation*}
-a \xrightarrow{x} b = \text{\hcode{node x a b}}
+a \xrightarrow{x} b = \text{\hcode{node}}\ x\ a\ b
 \end{equation*}
 \vspace{-5mm}
 
 \noindent
-With this notation, the above transitivity requirement can be expressed as
+Then generalised reflexivity and transitivity requirements can be expressed as follows.
 
-\vspace{-5mm}
-\begin{equation*}
-a \xrightarrow{x} b\ \dia\ b \xrightarrow{y} c\ \dia\ a \xrightarrow{x \mul y} c = a \xrightarrow{x} b\ \dia\ b \xrightarrow{y} c.
-\end{equation*}
-\vspace{-5mm}
+\begin{itemize}
+    \item \emph{Unit}:
+    \hcode{leaf}$~a =~$\hcode{leaf}$~a\ \xrightarrow{\ \one\ }\ $\hcode{leaf}~$a$;
+    \item \emph{Composition}:
+    $a \xrightarrow{x} b\ \dia\ b \xrightarrow{y} c = a \xrightarrow{x} b\ \dia\ b \xrightarrow{y} c\ \dia\ a \xrightarrow{x\,\mul\,y} c$.
+\end{itemize}
 
 \noindent
-One can notice that this rule is reminiscent of the relaxation step in various
-shortest-path finding algorithms, where a distance between two vertices $a$ and
-$c$ is updated after discovering a transitive route via a vertex $b$ (recall
-that in semirings~\mul~is used for sequential composition of generalised
-distances).
+Recalling that semiring's operator $\mul$ composes connectivities in
+sequence and that it has \one as the unit, we can refer to these two laws
+together as \emph{sequential composition}.
 
-% We need parallel composition too!
+These laws might remind you of the initialisation and relaxation steps used in
+various shortest-path finding algorithms. More precisely, in the
+\emph{tropical semiring}~\cite{mohri2002semiring}, where $\zero = \infty$,
+$\one = 0$, $\add = \min$, and $\mul = +$, the unit law corresponds to
+initialising the distance from a vertex to itself to $0$, and composition to
+relaxing the distance $a \arr c$ to $x + y$ after finding paths $a \arr b$ and
+$b \arr c$ with distances $x$ and $y$, respectively.
 
-One way to interpret trees and meet the reflexivity and transitivity
-requirements is to use the Floyd-Warshall-Kleene
-algorithm~\cite{hopcroft_ullman}\cite{kleene1951representation}. An
-implementation is available in the Appendix.
+Section~\S\ref{sec-labelled} will introduce a few missing tools for working with
+generalised edge-labelled graphs. With these tools, and the Floyd-Warshall-Kleene
+algorithm~\cite{hopcroft_ullman}\cite{kleene1951representation}, we will be able
+to interpret trees over an arbitrary semiring and satisfy the sequential
+composition requirements. An implementation can be found
+in~\cite{alga_haskell}.
+
+\subsection{Acyclic graphs and partial orders}\label{sec-acyclic-graphs}
+\vspace{-1mm}
+
+The \hcode{Tree} data type cannot rule out cyclic terms like
+$a \arr b \dia b \arr a$ at the type level. If these terms are undesirable, we
+can turn them into \emph{errors} by adding two requirements:
+
+\begin{itemize}
+    \item \emph{Cycle}:
+    \hcode{leaf}$~a\,\arr\,$\hcode{leaf}~$a = \bot$, where $\bot$ is a
+    ``cycle error'' value in the target type.
+    \item \emph{Cycle error is a zero}: $a \dia \bot = a \arr \bot = \bot \arr a = \bot$.
+\end{itemize}
+
+\noindent
+These laws plus transitivity ensure that all cyclic terms are equivalent to
+$\bot$. This allows us to represent strict partial orders that assert
+$\neg (a \prec a)$, and more general concurrency models such as partial order relations labelled with Boolean predicates~\cite{mokhov2009cpog}.
+
+% Switching networks?
 
 \section{Edge-labelled graphs}\label{sec-labelled}
 
-Armed with the notation from the previous section~\S\ref{sec-preorder}, we can
-use our tree language to describe graphs whose edges are labelled with values
-from an arbitrary semiring. For example, the expression
-$\text{\code{"a"}} \xrightarrow{\one} \text{\code{"b"}}\ \dia\ \text{\code{"b"}} \xrightarrow{\two} \text{\code{"c"}}$
+% How to decompose?
+
+Equipped with the notation from the previous section~\S\ref{sec-preorder}, we
+can use our tree language to describe graphs whose edges are labelled with
+values from an arbitrary semiring. For example, the expression
+$\text{\code{"a"}} \xrightarrow{\,\one\,} \text{\code{"b"}}\ \dia\ \text{\code{"b"}} \xrightarrow{\,\two\,} \text{\code{"c"}}$
 corresponds to the graph below.
 
-\vspace{2mm}
+\vspace{3mm}
 \hfill\includesvg[scale=0.28]{labelled-graph-example}\hfill
 \vspace{3mm}
 
-\noindent
-In Haskell, we can encode this as
-\code{"a"}~\code{-<1>-}~\code{"b"}~\hdia~\code{"b"}~\code{-<2>-}~\code{"c"}
-by defining a pseudo-ternary operator via two auxiliary binary operators
-\code{-<} and \code{>-}:
+% \noindent
+% In Haskell, we can encode this as
+% \code{"a"}~\code{-<1>-}~\code{"b"}~\hdia~\code{"b"}~\code{-<2>-}~\code{"c"}
+% by defining a pseudo-ternary operator via two auxiliary binary operators
+% \code{-<} and \code{>-}:
+%
+% \begin{lstlisting}
+% (-<) :: Tree s a -> s -> (Tree s a, s)  !$\hspace{8mm}\vrule\hspace{8mm}$!(>-) :: (Tree s a, s) -> Tree s a -> Tree s a
+% x -< s = (x, s)                         !$\hspace{39.66mm}\vrule\hspace{8mm}$!(x, s) >- y = node s x y
+% \end{lstlisting}
 
-\begin{lstlisting}
-(-<) :: Tree s a -> s -> (Tree s a, s)  !$\hspace{8mm}\vrule\hspace{8mm}$!(>-) :: (Tree s a, s) -> Tree s a -> Tree s a
-x -< s = (x, s)                         !$\hspace{39.66mm}\vrule\hspace{8mm}$!(x, s) >- y = node s x y
-\end{lstlisting}
-
 \noindent
-To give meaning to parallel composition of edges, we add a new folding requirement:
+To give meaning to parallel edges, we introduce the \emph{parallel composition}
+requirement, which is similar to the sequential composition
+from~\S\ref{sec-preorder} but concerns \zero and $\add$~instead:
 
 \begin{itemize}
-    \item Parallel composition of edge labels:
-    $a \xrightarrow{x} b\ \dia\ a \xrightarrow{y} b = a \xrightarrow{x \add y} b$.
+    \item \emph{Unit}:
+    \hcode{leaf}$~a =~$\hcode{leaf}$~a\,\xrightarrow{\ \zero\ }\ $\hcode{leaf}~$a$;
+    \item \emph{Composition}:
+    $a \xrightarrow{x} b\ \dia\ a \xrightarrow{y} b = a \xrightarrow{x\,\add\,y} b$.
 \end{itemize}
 
 \noindent
-Note that containment~(\S\ref{sec-simplicial-set}) is just a special case of
-this new, more general requirement:
+Note that if the semiring is idempotent, i.e., $x\ \add\ x = x$, then these laws
+imply general idempotence $a \dia a = a$. Indeed, if $a$ is a leaf, then
+idempotence is just the unit law. Otherwise, if $a = p \xrightarrow{x} q$, then
+idempotence follows from the composition law:
 
 \vspace{-5mm}
 \begin{equation*}
-a \arr b\ \dia\ a\ \dia\ b = a \xrightarrow{\one} b\ \dia\ a \xrightarrow{\zero} b = a \xrightarrow{\one\ \raisebox{0.15mm}{\add}\ \zero} b = a \xrightarrow{\one} b = a \arr b.
+p \xrightarrow{x} q\ \dia\ p \xrightarrow{x} q = p \xrightarrow{x\,\add\,x} q
+= p \xrightarrow{x} q.
 \end{equation*}
 \vspace{-5mm}
 
 \noindent
-With the parallel composition rule in place, we can interpret \hcode{Tree}
+Furthermore, containment~(\S\ref{sec-simplicial-set}) is also a special case of
+parallel composition:
+
+\vspace{-5mm}
+\begin{equation*}
+\begin{array}{rcll}
+a \arr b\ \dia\ a\ \dia\ b & = & a \xrightarrow{\one} b\ \dia\ a \xrightarrow{\zero} b & \text{(definitions of $\arr$, $\dia$ and $a \xrightarrow{x} b$)}\\
+ & = & a \xrightarrow{\one\,\raisebox{0.15mm}{\add}\,\zero} b & \text{(parallel composition)}\\
+ & = & a \xrightarrow{\one} b & \text{(unit of $\add$)}\\
+ & = & a \arr b & \text{(definitions of $\arr$ and $a \xrightarrow{x} b$)}
+\end{array}
+\end{equation*}
+\vspace{-3mm}
+
+\noindent
+Another tool that we need for interpreting edge-labelled graphs is the
+generalised decomposition requirement, which gives meaning to nested nodes.
+
+\vspace{5mm}
+\begin{itemize}
+    \item \emph{Decomposition}:
+
+          \vspace{-16.3mm}\begin{equation*}
+            \hspace{22.5mm}\begin{cases}
+                \ \ (a \xrightarrow{x} b) \xrightarrow{y} c\ =\ a \xrightarrow{x} b\ \dia\ a \xrightarrow{y} c\ \dia\ b \xrightarrow{y} c;\\
+                \ \ a \xrightarrow{x} (b \xrightarrow{y} c)\ =\ a \xrightarrow{x} b\ \dia\ a \xrightarrow{x} c\ \dia\ b \xrightarrow{y} c.\\
+            \end{cases}
+          \end{equation*}
+\end{itemize}
+
+\noindent
+Interestingly, decomposition subsumes both associativity and distributivity.
+Indeed, to derive associativity, we can instantiate both equalities with
+$x = y$:
+
+\vspace{-5mm}
+\begin{equation*}
+(a \xrightarrow{x} b) \xrightarrow{x} c = a \xrightarrow{x} b\ \dia\ a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c = a \xrightarrow{x} (b \xrightarrow{x} c).
+\end{equation*}
+\vspace{-5mm}
+
+\noindent
+Distributivity then follows from decomposition by setting the inner label to
+\zero.
+
+\vspace{-5mm}
+\begin{equation*}
+\begin{array}{rcll}
+(a \dia b) \xrightarrow{x} c &\!\!=\!\!& (a \xrightarrow{\zero} b) \xrightarrow{x} c &\!\!\text{(definitions of $\dia$ and $a \xrightarrow{x} b$)}\\
+ &\!\!=\!\!& a \xrightarrow{\zero} b\ \dia\ a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c &\!\!\text{(left decomposition)}\\
+ &\!\!=\!\!& a\ \dia\ b\ \dia\ a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c &\!\!\text{(definitions of $\dia$ and $a \xrightarrow{x} b$)}\\
+ &\!\!=\!\!& (a\,\dia\,a\,\xrightarrow{x}\,c)\ \dia\ (b\,\dia\,b\,\xrightarrow{x}\,c) &\!\!\text{(associativity and commutativity of \dia)}\\
+ &\!\!=\!\!& a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c &\!\!\text{(containment)}
+\end{array}
+\end{equation*}
+\vspace{-3mm}
+
+\noindent
+To conclude, the set of requirements for interpreting edge-labelled graphs are:
+parallel composition, decomposition, and commutativity of $\dia$ inherited from
+sets~(\S\ref{sec-set}).
+
+\newpage
+\noindent
+With all the folding requirements in place, we can interpret \hcode{Tree}
 expressions into the following ``flat'' representation of edge-labelled graphs,
 which maps vertices \hcode{a} to a collection of \hcode{s}-labelled outgoing
 edges.
@@ -950,15 +1079,26 @@ overlay = Map.unionWith (Map.unionWith (!\h{\hadd}!)) -- Parallel composition of
 \end{lstlisting}
 
 \noindent
-When implementing \hcode{connect}, we come across a subtle problem with
-\hcode{LGraph}: it makes it possible to add and accumulate redundant
-\zero-labelled edges in the inner \hcode{Map}. This is something that the
-\hcode{Tree}-based representation rules out.
+When implementing \hcode{connect}, we come across a subtle issue with
+\hcode{LGraph}: it is possible to unintentionally accumulate redundant
+\zero-labelled edges in the inner \hcode{Map}. Filtering out these redundant
+edges from \hcode{LGraph s a} is an important optimisation when working
+with sparse graphs in practice, which is why the code below requires
+\hcode{Eq s}\footnote{
+    We do not need the full power of \hcode{Eq s} here: we just need to test if
+    a given edge label is~\zero. For some types \hcode{s}, testing for \zero is
+    much easier than a general equality test; for example, testing if a
+    \hcode{Map k v} is empty is trivial but \hcode{Eq (Map k v)} is undecidable
+    for some choices of \hcode{v}. To resolve this problem, one can switch to a
+    more precise constraint like \hcode{EqZero s}.
+}. Note that the \hcode{Tree}-based representation of graphs sidesteps this
+issue because \hcode{overlay x y} and \hcode{connect zero x y} are represented
+by the same tree \hcode{Node zero x y}.
 
 \begin{lstlisting}
-connect :: (Ord a, Semiring s) => s -> LGraph s a -> LGraph s a -> LGraph s a
+connect :: (Ord a, Semiring s, Eq s) => s -> LGraph s a -> LGraph s a -> LGraph s a
 connect s x y
-    | isZero s  = overlay x y -- Avoid redundant !\h{zero}!-labelled edges
+    | s == zero = overlay x y -- Filter out redundant !\h{zero}!-labelled edges
     | otherwise = Map.unionsWith (Map.unionWith (!\h{\hadd}!)) [ x, y, newEdges ]
   where
     outgoing = Map.fromSet (const s) (Map.keysSet y)
@@ -970,16 +1110,16 @@ Finally, we can fold a \hcode{Tree s a} to turn it into the corresponding
 \hcode{LGraph s a}:
 
 \begin{lstlisting}
-toLGraph :: (Ord a, Semiring s) => Tree s a -> LGraph s a
+toLGraph :: (Ord a, Semiring s, Eq s) => Tree s a -> LGraph s a
 toLGraph = fold vertex connect
 \end{lstlisting}
 
 \noindent
-It is useful to combine edge-labelled graphs with the reflexivity and
-transitivity requirements described in the previous section on
-preorders~(\S\ref{sec-preorder}). By computing the reflexive and transitive
-closure of an edge-labelled graph, one can solve a variety of semiring
-optimisation problems, e.g. see~\cite{2013_semirings_dolan}.
+It is useful to combine edge-labelled graphs with the sequential composition
+requirement described in the previous section~(\S\ref{sec-preorder}). By
+computing the reflexive and transitive closure of an edge-labelled graph, it is
+possible to solve a variety of semiring optimisation problems, e.g.,
+see~\cite{2013_semirings_dolan}\cite{mohri2002semiring}.
 
 We have now seen how to use trees as a language for describing and manipulating
 various kinds of sets and graphs. The next section introduces \emph{united
@@ -1000,7 +1140,6 @@ composition, as expressed by the \emph{unit axioms}
 $a \dia \varepsilon = \varepsilon \dia a = a$. In words, composing the unit
 element with another element does not change the latter.
 
-\noindent
 Monoids often come in pairs: addition and multiplication $(+, \times)$,
 disjunction and conjunction $(\vee, \wedge)$, set union and intersection
 $(\cup, \cap)$, parallel and sequential composition of processes
@@ -1060,7 +1199,7 @@ next subsection we find another way of pairing monoids, which does not involve
 the axioms of annihilation and absorption, and makes the resulting structure
 more interesting.
 
-\subsection{From $0=1$ to containment laws}
+\subsection{From $0=1$ to containment laws and back}
 
 Consider two monoids $(S, +, 0)$ and $(S, \cdot, 1)$, such that $+$ is
 commutative and $\cdot$ distributes over $+$. We call these monoids
@@ -1068,11 +1207,9 @@ commutative and $\cdot$ distributes over $+$. We call these monoids
 will use $\varepsilon$ to denote the unit element of both monoids, that is,
 $a + \varepsilon = a \cdot \varepsilon = a$. Note: we will often omit the
 operator $\cdot$ and write simply $\textit{ab}$ instead of $a \cdot b$, which is
-a usual convention. We will further refer to $\varepsilon$ as \emph{empty}, the
+a common convention. We will further refer to $\varepsilon$ as \emph{empty}, the
 operation~$+$ as \emph{overlay}, and the operation~$\cdot$ as \emph{connect}.
 
-\newpage
-\noindent
 What can we tell about united monoids? First of all, it is easy to show that the
 monoid $(S, +, \varepsilon)$ is idempotent:
 
@@ -1112,7 +1249,7 @@ The two other laws are proved analogously (in fact, they are equivalent to each
 other).
 
 Surprisingly, the containment law $\textit{ab} = \textit{ab} + a$ is equivalent
-to $0 = 1$, i.e., the latter can be proved from the former:
+to $0 = 1$, i.e., the latter can also be proved from the former:
 
 \vspace{-5mm}
 \begin{equation*}
@@ -1133,7 +1270,7 @@ nonsensical (semigroups have no ``units'' after all), however, note that if they
 secretly had unit elements, they would have to coincide.
 
 In the same manner, the containment laws imply that zeroes of the two operations
-must be the same. Let $z^{+}$ ans $z^{\cdot}$ denote the zeroes of $+$ and
+must be the same. Let $z^{+}$ and $z^{\cdot}$ denote the zeroes of $+$ and
 $\cdot$, respectively. Then:
 
 \vspace{-5mm}
@@ -1146,6 +1283,12 @@ z^{+} & = & z^{\cdot}\ +\ z^{+} & \text{($z^{+}$ is a zero of $+$)}\\
 \end{array}
 \end{equation*}
 \vspace{-3mm}
+
+\noindent
+Back in~\ref{sec-acyclic-graphs}, we used zero $\bot$ to model ``cycle errors''.
+As we now see, requiring both $a \dia \bot = a$ and
+$a \arr \bot = \bot \arr a = \bot$ was unnecessary: we could have picked just
+one of these requirements and the other one would follow.
 
 \noindent
 Finally, let us prove another unusual property of united monoids: overlay and
@@ -1167,12 +1310,12 @@ a & = & a + \varepsilon & \text{(unit of $+$)} & \vrule & a & = & a + \varepsilo
 Therefore, it is not possible to extend united monoids to ring- or field-like
 structures with inverses.
 
-% It is time to look at some examples of united monoids.
+It is time to look at some examples of united monoids.
 
 \subsection{Examples from this paper}
 
-The containment laws should have reminded you about simplicial sets since
-the latter are closed in terms of containment. For example, a filled-in triangle
+The containment laws should have reminded you of simplicial sets since the
+latter are closed in terms of containment. For example, a filled-in triangle
 contains its edges and vertices, and it cannot appear in a simplicial set
 without any of them. This property can be expressed algebraically as:
 $\textit{abc} = \textit{abc} + \textit{ab} + \textit{ac} + \textit{bc} + a + b + c$.
@@ -1195,27 +1338,33 @@ We can similarly prove higher-dimensional versions of the containment law; they
 all follow from the basic law $\textit{ab} = \textit{ab} + a$, or,
 alternatively, from $0 = 1$.
 
-Graphs, preorders and edge-labelled graphs also satisfy the containment laws.
-In this paper we focused on non-empty structures, which is why we didn't come
-across units of the overlay and connect operators. By wrapping trees in
+Unlabelled graphs, preorders, and partial orders also satisfy the containment
+laws. In this paper, we focused on non-empty structures, which is why we didn't
+come across units of the overlay and connect operators. By wrapping trees in
 \hcode{Maybe}, as we've done in a few cases, we were essentially augmenting our
 structures with the unit \hcode{Nothing}.
 
 It is worth remarking on the two remaining cases: sets and edge-labelled graphs.
-When working with sets, we had only one operator \hdia, which was caused by the
-fact that we used a trivial semiring with \zero~$=$~\one. One can think of this
-case as \hdia~being a monoid united with itself. The case of edge-labelled
-graphs is more interesting. There we had as many operations as there were
-elements in the edge label semiring~\hcode{s}. It turns out that every operation
-$\xrightarrow{x}$ is united with \hdia. In other words, edge-labelled graphs
-form a \emph{semiring of united monoids}.
+When working with sets, we had only one operator \hdia, which was a consequence
+of the fact that we used a trivial semiring with \zero~$=$~\one. One can think
+of this case as the monoid \hdia~being united with itself.
+
+The case of edge-labelled graphs is more interesting. There we had as many
+operations as there were elements in the edge label semiring~\hcode{s}. It turns
+out that every monoid $\xrightarrow{x}$ is united with the overlay monoid \hdia.
+In other words, edge-labelled graphs form a \emph{semiring of united monoids}.
 
 \subsection{Other examples}
 
-One example can be found in Haskell's \code{ApplicativeDo} language
-extension~\cite{applicativedo}. It uses a simple cost model for defining the
-execution time of programs composed in parallel or in sequence. The two monoids
-are:
+United monoids also appear when studying the composition of concurrent
+processes. As an example, consider Haskell's language extension
+\code{ApplicativeDo}~\cite{applicativedo}, which uses a simple cost model for
+characterising the execution time of programs that are composed in parallel and
+in sequence.
+
+\newpage
+\noindent
+The cost model comprises two monoids:
 
 \begin{itemize}
     \item $(\mathbb{Z}^{\ge 0}, \max, 0)$: the execution time of programs $a$
@@ -1240,14 +1389,13 @@ Note that the resulting algebraic structure is different from the tropical
 max-plus semiring $(\mathbb{R}^{-\infty}, \max, -\infty, +, 0)$ commonly used in
 scheduling, where the unit of $\max$ is $-\infty$ but the unit of $+$ is $0$.
 
-\noindent
 Interestingly, parallel and sequential composition of programs also forms a
 united monoid, where the empty program is the unit. One can therefore call the
 cost model function $\text{\hcode{time}}$ a \emph{united monoid
-homomorphism\footnote{
+homomorphism}\footnote{
     A \emph{homomorphism} is a structure-preserving map between two algebraic
     structures.
-}}. A related example can be found in~\cite{beaumont2017concepts}, where
+}. Another related example can be found in~\cite{beaumont2017concepts}, where
 asynchronous circuit specifications are composed in parallel and in sequence,
 using graphs labelled with the semiring of Boolean predicates.
 
@@ -1261,11 +1409,15 @@ using graphs labelled with the semiring of Boolean predicates.
 
 This paper continues the research on \emph{algebraic graphs} started
 in~\cite{mokhov_alga}. Since their introduction, algebraic graphs have been
-implemented in several languages (including Agda, Fsharp, Haskell, PureScript,
-Scala, TypeScript, and R) and found applications in industry, e.g., in GitHub's
-static program analysis library Semantic~\cite{semantic_paper}\cite{semantic_repo}.
-In this paper we further distill the essence of the algebraic approach to
-working with graphs by replacing the data type
+implemented in several languages, including Agda~\cite{alga_agda},
+F\#~\cite{alga_fsharp}, Haskell~\cite{alga_haskell},
+Kotlin~\cite{alga_kotlin}, PureScript~\cite{alga_purescript},
+Scala~\cite{alga_scala}, TypeScript~\cite{alga_typescript}, and
+R~\cite{alga_r}. Algebraic graphs also found applications in industry, e.g., in
+GitHub's static program analysis library
+Semantic~\cite{semantic_paper}\cite{semantic_repo}. In this paper we further
+distil the essence of the algebraic approach to working with graphs by replacing
+the data type
 
 \begin{lstlisting}[basicstyle=\sffamily\smaller]
 data Graph a = Empty | Vertex a | Overlay (Graph a) (Graph a) | Connect (Graph a) (Graph a)
@@ -1294,7 +1446,9 @@ loss of compactness and the need to maintain various correctness invariants.
 % Add a note to the section on graphs about the invariant
 
 Using semirings as a general framework for solving problems on graphs is, of
-course, not new. Dolan's ``Fun with Semirings''~\cite{2013_semirings_dolan} is a
+course, not new; see, for instance,~\cite{mohri2002semiring}. In the functional
+programming community, Dolan's
+``Fun with Semirings''~\cite{2013_semirings_dolan} is a
 notable example of parameterising matrices with semirings, which motivated the
 author of this paper to apply semirings in the context of algebraic graphs. In
 a more recent work, Kidney and Wu~\cite{weighted_search} use semirings for
@@ -1303,7 +1457,6 @@ from vertices to their neighbours.
 
 % Brent's sparks: https://byorgey.wordpress.com/2018/10/01/monoidal-sparks/
 % Two monoid products: direct and sparked are monoids with the same identity
-
 
 Jeremy Gibbons defines operations \hcode{above} and \hcode{beside} for composing
 directed acyclic graphs~\cite{1995_gibbons_algebra}. They have the same unit
@@ -1319,7 +1472,7 @@ monoids. In the paper on Concurrent Kleene Algebra~\cite{hoare2011concurrent},
 Hoare et al. use the term ``bimonoid'' to refer to such structures (without
 investigating them in detail). In category theory, ``bimonoid'' is used for an
 unrelated concept (a structure with a monoid and a
-comonoid~\cite{porst_bimonoids}), hence our decision to use the term
+comonoid~\cite{porst_bimonoids}). The author of this paper chose to use the term
 ``united monoids'', which appears to be unused and is also more specific
 compared to ``bimonoid''.
 
@@ -1330,8 +1483,19 @@ the same unit \hcode{pure = return}, and they can therefore be considered
 \emph{united monoids in the category of endofunctors}. Investigating categorical
 equivalents of the presented ideas is an interesting direction of future work.
 
-% \acks
-% I want to thank ....
+\section*{Acknowledgements}
+Many people contributed to this research by giving feedback on earlier versions
+of this work, participating in numerous online and in-person discussions, and
+last but not least, expressing genuine interest and encouragement.
+
+Here is a most likely incomplete list (I apologise for any omissions):
+Arseniy Alekseyev, Roland Backhouse, Gershom Bazerman,
+Dave Clarke, Ulan Degenbaev, Chris Doran, Victor Khomenko, Adithya Kumar,
+Dave Long, Anton Lorenzen, Georgy Lukyanov, Alp Mestanogullari, Alexandre Moine,
+Andreas Nuyts, Greg Pfeil, Stefan Plantikow, Armando Santos, Danil Sokolov,
+Sjoerd Visscher, Leo White and Alex Yakovlev. I am also grateful to the the
+Programming Journal's Programme Committee for the thorough reviews that helped
+me improve the final version of the paper.
 
 \printbibliography
 \end{document}
