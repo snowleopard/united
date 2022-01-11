@@ -1,4 +1,4 @@
-\documentclass[english,submission]{programming}
+\documentclass[crc,english]{programming}
 \usepackage[backend=biber]{biblatex}
 \addbibresource{refs.bib}
 \usepackage{svg}
@@ -78,7 +78,18 @@
 \newcommand{\arr}{\,\text{$\rightarrow$}\,}
 \newcommand{\ldia}{\text{\raisebox{-0.3mm}{\Large $\diamond$}}}
 
-
+%%% The following is specific to Programming Journal, Volume 6, Issue 3 and the paper
+%%% 'United Monoids: Finding Simplicial Sets and Labelled Algebraic Graphs in Trees'
+%%% by Andrey Mokhov.
+%%%
+\paperdetails{
+  submitted=2021-10-01,
+  published=2022-02-15,
+  year=2022,
+  volume=6,
+  issue=3,
+  articlenumber=12,
+}
 \begin{document}
 
 \paperdetails{
@@ -89,6 +100,14 @@
 \title{United Monoids}
 \subtitle{Finding Simplicial Sets and Labelled Algebraic Graphs in Trees}
 \author[~]{Andrey Mokhov}
+\authorinfo{is a software engineer at Jane Street London,
+  and a visiting fellow at Newcastle University, UK. His
+  research interests are in applying abstract mathematics and
+  functional programming to solving large-scale engineering
+  problems.
+  \begin{description}
+    \item[email:] \email{andrey.mokhov@ncl.ac.uk}
+  \end{description}}
 \affiliation[~]{\hspace{-5.3mm}Jane Street, London, UK}
 \affiliation[~]{\hspace{-5.3mm}Newcastle University, Newcastle upon Tyne, UK}
 
@@ -512,7 +531,7 @@ indeed, \hcode{Tree.}\code{size ("b" $\,\hdia\,$ "b")}$\ =2$ since the tree has
 \emph{two leaves}, whereas \hcode{TSet.}\code{size ("b" $\,\hdia\,$ "b")}$\ = 1$
 since the set described by the tree has only \emph{one element}.
 
-\section{Simplicial sets}\label{sec-simplicial-set}
+\section{Simplicial Sets}\label{sec-simplicial-set}
 \vspace{-1mm}
 
 Describing plain sets with trees isn't new or particularly exciting. However, we
@@ -768,7 +787,7 @@ e_1 \cup e_2 \cup e_3 \cup (v_1 \times v_2) \cup (v_1 \times v_3) \cup (v_2 \tim
 \end{equation*}
 \vspace{-5mm}
 
-\subsection{Other kinds of graphs}\label{sec-other-graphs}
+\subsection{Other Kinds of Graphs}\label{sec-other-graphs}
 
 So far we discussed only directed graphs with no edge labels. One way to support
 other kinds of graphs is to strengthen the tree folding requirements.
@@ -838,7 +857,7 @@ hasEdge x y graph = case induce (\a -> a == x || a == y) graph of
 !\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
 
-\section{Preorders and generalised transitively-closed graphs}\label{sec-preorder}
+\section{Preorders and Generalised Transitively-Closed Graphs}\label{sec-preorder}
 
 A \emph{preorder} is a binary relation $\preceq$ that is:
 
@@ -920,7 +939,7 @@ to interpret trees over an arbitrary semiring and satisfy the sequential
 composition requirements. An implementation can be found
 in~\cite{alga_haskell}.
 
-\subsection{Acyclic graphs and partial orders}\label{sec-acyclic-graphs}
+\subsection{Acyclic Graphs and Partial Orders}\label{sec-acyclic-graphs}
 \vspace{-1mm}
 
 The \hcode{Tree} data type cannot rule out cyclic terms like
@@ -941,7 +960,7 @@ $\neg (a \prec a)$, and more general concurrency models such as partial order re
 
 % Switching networks?
 
-\section{Edge-labelled graphs}\label{sec-labelled}
+\section{Edge-Labelled Graphs}\label{sec-labelled}
 
 % How to decompose?
 
@@ -1199,7 +1218,7 @@ next subsection we find another way of pairing monoids, which does not involve
 the axioms of annihilation and absorption, and makes the resulting structure
 more interesting.
 
-\subsection{From $0=1$ to containment laws and back}
+\subsection{From $0=1$ to Containment Laws and Back}
 
 Consider two monoids $(S, +, 0)$ and $(S, \cdot, 1)$, such that $+$ is
 commutative and $\cdot$ distributes over $+$. We call these monoids
@@ -1312,7 +1331,7 @@ structures with inverses.
 
 It is time to look at some examples of united monoids.
 
-\subsection{Examples from this paper}
+\subsection{Examples from This Paper}
 
 The containment laws should have reminded you of simplicial sets since the
 latter are closed in terms of containment. For example, a filled-in triangle
@@ -1354,7 +1373,7 @@ operations as there were elements in the edge label semiring~\hcode{s}. It turns
 out that every monoid $\xrightarrow{x}$ is united with the overlay monoid \hdia.
 In other words, edge-labelled graphs form a \emph{semiring of united monoids}.
 
-\subsection{Other examples}
+\subsection{Other Examples}
 
 United monoids also appear when studying the composition of concurrent
 processes. As an example, consider Haskell's language extension
@@ -1400,12 +1419,11 @@ asynchronous circuit specifications are composed in parallel and in sequence,
 using graphs labelled with the semiring of Boolean predicates.
 
 % Naturally ordered
-% Use trees/united monoids for modelling parallel/sequential composition
 % What about tries?
 % Equivalence classes?
 % Languages
 
-\section{Related work}\label{sec-related-work}
+\section{Related Work}\label{sec-related-work}
 
 This paper continues the research on \emph{algebraic graphs} started
 in~\cite{mokhov_alga}. Since their introduction, algebraic graphs have been
@@ -1483,19 +1501,20 @@ the same unit \hcode{pure = return}, and they can therefore be considered
 \emph{united monoids in the category of endofunctors}. Investigating categorical
 equivalents of the presented ideas is an interesting direction of future work.
 
-\section*{Acknowledgements}
-Many people contributed to this research by giving feedback on earlier versions
-of this work, participating in numerous online and in-person discussions, and
-last but not least, expressing genuine interest and encouragement.
-
+\acks
+I would like to thank everyone who contributed to this research by giving
+feedback on earlier versions of this work, participating in numerous online and
+in-person discussions, and last but not least, expressing genuine interest and
+encouragement.
 Here is a most likely incomplete list (I apologise for any omissions):
 Arseniy Alekseyev, Roland Backhouse, Gershom Bazerman,
 Dave Clarke, Ulan Degenbaev, Chris Doran, Victor Khomenko, Adithya Kumar,
 Dave Long, Anton Lorenzen, Georgy Lukyanov, Alp Mestanogullari, Alexandre Moine,
 Andreas Nuyts, Greg Pfeil, Stefan Plantikow, Armando Santos, Danil Sokolov,
-Sjoerd Visscher, Leo White and Alex Yakovlev. I am also grateful to the the
+Sjoerd Visscher, Leo White and Alex Yakovlev. I am also grateful to the
 Programming Journal's Programme Committee for the thorough reviews that helped
 me improve the final version of the paper.
 
+\newpage
 \printbibliography
 \end{document}
