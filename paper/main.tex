@@ -853,7 +853,7 @@ hasVertex = SimplicialSet.hasVertex
 hasEdge :: Ord a => a -> a -> TGraph a -> Bool
 hasEdge x y graph = case induce (\a -> a == x || a == y) graph of
     Nothing -> False
-    Just sub -> (x,y) `elem` edgeSet sub -- Here !\h{sub}! can only contain vertices !\h{x}! and !\h{y}!
+    Just sub -> elem (x,!\,!y) (edgeSet sub) -- Here !\h{sub}! can only contain vertices !\h{x}! and !\h{y}!
 !\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
 
