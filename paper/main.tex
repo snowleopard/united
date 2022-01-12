@@ -160,7 +160,7 @@
 %
 % Importance: Why does this work matter?
 
-\emph{Context:} Graphs and various graph-like combinatorial structures, such as
+Graphs and various graph-like combinatorial structures, such as
 preorders and hypergraphs, are ubiquitous in programming. This paper focuses on
 representing graphs in a purely functional programming language like Haskell.
 There are several existing approaches; one of the most recently developed ones
@@ -169,33 +169,30 @@ represent graphs and has attracted users, including from industry, due to its
 emphasis on equational reasoning and making a common class of bugs impossible
 by eliminating internal invariants.
 
-\emph{Inquiry:} The previous formulation of algebraic graphs did not support
-edge labels, which was a serious practical limitation. This paper redesigns the
-main algebraic data type and removes this limitation.
+The previous formulation of algebraic graphs did not support edge labels, which
+was a serious practical limitation. In this paper, we redesign the main
+algebraic data type and remove this limitation. We follow a fairly standard
+approach of parameterising a data structure with a semiring of edge labels. The
+new formulation is both more general and simpler: the two operations for
+composing graphs used in the previous work can now be obtained from a single
+operation by fixing the semiring parameter to zero and one, respectively.
 
-\emph{Approach:} We follow a fairly standard approach of parameterising a data
-structure with a semiring of edge labels. The newly developed data structure is
-both more general and simpler: the two ways of composing graphs used in the
-original formulation can now be obtained from a single operation by fixing the
-semiring parameter to zero and one, respectively.
+By instantiating the new data type with different semirings, and working out
+laws for interpreting the resulting expression trees, we discover an unusual
+algebraic structure, which we call ``united monoids'', that
+is, a pair of monoids whose unit elements coincide. We believe that it is worth
+studying united monoids in their full generality, going beyond the graphs which
+prompted their discovery. To that end, we characterise united monoids with a
+minimal set of axioms, prove a few basic theorems, and discuss several notable
+examples.
 
-\emph{Knowledge:} By analysing the resulting data structure and formulating laws
-for interpreting expressions of the corresponding type, we discover an unusual
-algebraic structure, which we call ``united monoids'', that is, a pair of
-monoids whose unit elements coincide. We believe that it is worth studying
-united monoids in their full generality, going beyond the graphs which prompted
-their discovery. To that end, we characterise united monoids with a minimal set
-of axioms, prove a few basic theorems, and discuss several notable examples.
-
-\emph{Grounding}: We validate the presented approach by implementing it in the
+We validate the presented approach by implementing it in the
 open-source \textsf{algebraic-graphs} library. Our theoretical contributions
-are supported by proofs that are included in the paper itself and are also
-available in a machine-checked artifact.
-
-\emph{Importance:} By extending algebraic graphs with support for edge labels,
-we make them suitable for a much larger class of possible applications. By
-studying united monoids, we provide a theoretical foundation for further
-research in this area.
+are supported by proofs that are included in the paper and have also
+been machine-checked in Agda. By extending algebraic graphs with support for
+edge labels, we make them suitable for a much larger class of possible
+applications. By studying united monoids, we provide a theoretical foundation
+for further research in this area.
 \end{abstract}
 
 \section{Introduction}
@@ -236,7 +233,7 @@ fold leaf node = meaning
 \end{lstlisting}
 
 \noindent
-For example, to compute the \emph{size} of a tree, i.e. the number of leaves in
+For example, to compute the \emph{size} of a tree, i.e., the number of leaves in
 it, we can fold the tree into an \code{Int} as follows.
 
 \begin{lstlisting}
@@ -313,17 +310,19 @@ Semirings give us a basic language for connectivity:
             An operation $\bullet$ is \emph{commutative} if
             $a \bullet b = b \bullet a$.
         } operation for combining connections in \emph{parallel}; e.g.,
-        selecting the \emph{maximum} bandwidth link between two locations.
-  \item Multiplication~$\mul$ is for combining connections in \emph{sequence}.
-        Continuing the example, $\mul$ corresponds to taking the \emph{minimum}
-        bandwidth of network links on route between two locations.
-        Multiplication distributes\footnote{
+        selecting a link with the \emph{maximum} bandwidth from available
+        alternatives.
+  \item Multiplication~$\mul$ combines connections in \emph{sequence}.
+        Continuing the example, to compute the bandwidth of a route, we take the
+        \emph{minimum} over all links that need to be traversed. Multiplication
+        distributes\footnote{
             \emph{Distributivity} of $\otimes$ over $\oplus$ means
             $a \otimes (b \oplus c) = (a \otimes b) \oplus (a \otimes c)$ and
             $(a \oplus b) \otimes c = (a \otimes c) \oplus (b \otimes c)$.
-        } over addition and has \zero as a zero\footnote{
-            An element $z$ is a \emph{zero} (or an \emph{annihilating element})
-            of an operation $\bullet$ if $z \bullet a = a \bullet z = z$.
+        } over addition and has \zero as its zero\footnote{
+            An element $z$ is the \emph{zero} (or the
+            \emph{annihilating element}) of an operation $\bullet$ if
+            $z \bullet a = a \bullet z = z$.
         }.
   \item Finally, \one denotes either a unit of connectivity or infinite
         connectivity, depending on a specific semiring. In the bandwidth
@@ -515,9 +514,9 @@ requirements on every call site of \hcode{fold leaf node}\footnote{
 }:
 
 \begin{itemize}
-    \item $\text{\hcode{node zero a b}} = \text{\hcode{node zero b a}}$, i.e.,
+    \item $\text{\hcode{node zero}}~a~b = \text{\hcode{node zero}}~b~a$, i.e.,
           commutativity of \zero-labelled nodes;
-    \item $\text{\hcode{node zero a a}} = \text{\hcode{a}}$, i.e.,
+    \item $\text{\hcode{node zero}}~a~a = a$, i.e.,
     idempotence\footnote{
          An operation $\bullet$ is \emph{idempotent} if $a \bullet a = a$.
     } of \zero-labelled nodes.
@@ -576,7 +575,7 @@ one-dimensional simplices (edges $\textit{ac}$~and~$\textit{bc}$).
 
 When working with simplicial sets, we will extend the set of requirements on
 interpreting trees by adding the \emph{containment} (see~\S\ref{sec-united}) and
-distributivity requirements:
+distributivity laws:
 
 \vspace{-1mm}\begin{itemize}
     \item Associativity, inherited from~\S\ref{sec-tree}:
@@ -594,7 +593,7 @@ distributivity requirements:
 
     \item Distributivity (\textbf{\color{darkblue}new!}):
 
-          \vspace{0.5mm}\hspace{10mm}$a \arr (b \dia c) = (a \arr b) \dia (a \arr c)$~~and~~$(a \dia b) \arr c = (a \arr c) \dia (b \arr c)$.
+          \vspace{0.5mm}\hspace{10mm}$a \arr (b \dia c) = (a \arr b)\,\dia\,(a \arr c)$~~and~~$(a \dia b) \arr c = (a \arr c)\,\dia\,(b \arr c)$.
 \end{itemize}
 
 \noindent
@@ -652,7 +651,7 @@ map = fmap -- Via !\h{Functor}!
 \end{lstlisting}
 
 \noindent
-Now that we know the rules of interpreting trees over the Boolean semiring, we
+Now that we know the laws for interpreting trees over the Boolean semiring, we
 need to choose a target representation for simplicial sets. Alas, there is no
 standard \code{Data.SimplicialS}\code{et}, so we need to come up with our own.
 Here is a simple candidate:
@@ -679,7 +678,8 @@ overlay :: Ord a => SimplicialSet a -> SimplicialSet a -> SimplicialSet a
 overlay = Set.union
 !\vspace{-1mm}!
 connect :: Ord a => SimplicialSet a -> SimplicialSet a -> SimplicialSet a
-connect x y = Set.unions [x, y, Set.map (uncurry (!\hdia!)) (Set.cartesianProduct x y)]
+connect x y =
+    Set.unions [x, y, Set.map (uncurry NonEmpty.append) (Set.cartesianProduct x y)]
 !\vspace{-1mm}!
 toSimplicialSet :: Ord a => Tree Bool a -> SimplicialSet a
 toSimplicialSet = fold vertex (\s -> if s then connect else overlay)
@@ -721,7 +721,7 @@ folding requirement:
 
 \begin{itemize}
     \item Decomposition:
-          $a \arr b \arr c = (a \arr b) \dia (a \arr c) \dia (b \arr c)$.
+          $a \arr b \arr c = (a \arr b)\,\dia\,(a \arr c)\,\dia\,(b \arr c)$.
 \end{itemize}
 
 \noindent
@@ -762,13 +762,12 @@ of their vertex sets:
 
 \begin{lstlisting}
 connect :: Ord a => Graph a -> Graph a -> Graph a
-connect (v1,e1) (v2,e2) = (Set.union v1 v2, Set.unions [e1, e2, Set.cartesianProduct v1 v2])
+connect (v1,e1) (v2,e2) = (Set.union!\,!v1!\,!v2, Set.unions!\,![e1,!\,!e2,!\,!Set.cartesianProduct!\,!v1!\,!v2])
 \end{lstlisting}
 
 \noindent
-It is not obvious that this interpretation respects the decomposition
-requirement, so let us check it. For the vertex set, the requirement holds
-because $\cup$ is idempotent:
+It is not obvious that this interpretation respects the decomposition law, so
+let us check it. For the vertex set, the law holds because $\cup$ is idempotent:
 
 \vspace{-5mm}
 \begin{equation*}
@@ -804,7 +803,8 @@ Specifically:
     corresponding to vertices from the same part. That is,
     $\forall (a,b) \in (P \times P) \cup (Q \times Q),\ $\hcode{leaf}$~a\,\dia\,$\hcode{leaf}~$b =~$\hcode{leaf}$~a\,\arr\,$\hcode{leaf}~$b$,
     where $P$~and~$Q$ are the two parts of the bipartite graph.
-    \item For \emph{transitively-closed graphs}, see \S\ref{sec-preorder}.
+    \item For \emph{transitively-closed} and \emph{acyclic graphs},
+    see~\S\ref{sec-preorder}.
 \end{itemize}
 
 \noindent
@@ -871,8 +871,7 @@ A \emph{preorder} is a binary relation $\preceq$ that is:
 % discuss a generalisation.
 \noindent
 As mentioned earlier in~\S\ref{sec-other-graphs}, reflexivity can be expressed
-as a new tree folding requirement, which states that connecting a leaf to itself
-must be redundant:
+as a new law, which requires that connecting a leaf to itself must be redundant:
 
 \begin{itemize}
     \item Reflexivity:
@@ -881,9 +880,9 @@ must be redundant:
 
 \noindent
 To ensure that preorder expressions are interpreted
-``modulo transitive connections'', we also add the following transitivity
-requirement. It states that adding/removing a transitive connection $a \arr c$
-to/from the tree $a \arr b \dia b \arr c$ must be redundant:
+``modulo transitive connections'', we also add the following transitivity law.
+It states that adding/removing a transitive connection $a \arr c$ to/from the
+tree $a \arr b \dia b \arr c$ must be redundant:
 
 \begin{itemize}
     \item Transitivity: $a \arr b\ \dia\ b \arr c = a \arr b\ \dia\ b \arr c\ \dia\ a \arr c$.
@@ -893,9 +892,9 @@ to/from the tree $a \arr b \dia b \arr c$ must be redundant:
 % Note that the alternative (second) definition makes use of the decomposition
 % law.
 \noindent
-Reading the reflexivity and transitivity requirements from left to right, one
-can think of them as introducing the preorder terms $a \preceq a$ and
-$a \preceq c$ under suitable assumptions.
+Reading the reflexivity and transitivity laws from left to right, one can think
+of them as introducing the preorder terms $a \preceq a$ and $a \preceq c$ under
+suitable assumptions.
 % Conversely, reading the requirements from right to left corresponds to
 % eliminating the terms $a \preceq a$ and $a \preceq c$, or simplifying them away.
 
@@ -910,7 +909,7 @@ a \xrightarrow{x} b = \text{\hcode{node}}\ x\ a\ b
 \vspace{-5mm}
 
 \noindent
-Then generalised reflexivity and transitivity requirements can be expressed as follows.
+Then generalised reflexivity and transitivity laws can be expressed as follows.
 
 \begin{itemize}
     \item \emph{Unit}:
@@ -944,13 +943,13 @@ in~\cite{alga_haskell}.
 
 The \hcode{Tree} data type cannot rule out cyclic terms like
 $a \arr b \dia b \arr a$ at the type level. If these terms are undesirable, we
-can turn them into \emph{errors} by adding two requirements:
+can turn them all to \emph{errors} by adding two new laws:
 
 \begin{itemize}
     \item \emph{Cycle}:
     \hcode{leaf}$~a\,\arr\,$\hcode{leaf}~$a = \bot$, where $\bot$ is a
     ``cycle error'' value in the target type.
-    \item \emph{Cycle error is a zero}: $a \dia \bot = a \arr \bot = \bot \arr a = \bot$.
+    \item \emph{Zero}: $a \dia \bot = a \arr \bot = \bot \arr a = \bot$.
 \end{itemize}
 
 \noindent
@@ -987,8 +986,8 @@ corresponds to the graph below.
 
 \noindent
 To give meaning to parallel edges, we introduce the \emph{parallel composition}
-requirement, which is similar to the sequential composition
-from~\S\ref{sec-preorder} but concerns \zero and $\add$~instead:
+law. It is similar to the sequential composition from~\S\ref{sec-preorder}
+but concerns \zero and $\add$~instead of~\one~and~$\mul$:
 
 \begin{itemize}
     \item \emph{Unit}:
@@ -1017,17 +1016,17 @@ parallel composition:
 \vspace{-5mm}
 \begin{equation*}
 \begin{array}{rcll}
-a \arr b\ \dia\ a\ \dia\ b & = & a \xrightarrow{\one} b\ \dia\ a \xrightarrow{\zero} b & \text{(definitions of $\arr$, $\dia$ and $a \xrightarrow{x} b$)}\\
+a \arr b\ \dia\ a\ \dia\ b & = & a \xrightarrow{\one} b\ \dia\ a \xrightarrow{\zero} b & \text{(definitions of $\arr$, $\dia$ and $\xrightarrow{x}$)}\\
  & = & a \xrightarrow{\one\,\raisebox{0.15mm}{\add}\,\zero} b & \text{(parallel composition)}\\
  & = & a \xrightarrow{\one} b & \text{(unit of $\add$)}\\
- & = & a \arr b & \text{(definitions of $\arr$ and $a \xrightarrow{x} b$)}
+ & = & a \arr b & \text{(definitions of $\arr$ and $\xrightarrow{x}$)}
 \end{array}
 \end{equation*}
 \vspace{-3mm}
 
 \noindent
 Another tool that we need for interpreting edge-labelled graphs is the
-generalised decomposition requirement, which gives meaning to nested nodes.
+generalised decomposition law, which gives meaning to nested nodes.
 
 \vspace{5mm}
 \begin{itemize}
@@ -1059,9 +1058,9 @@ Distributivity then follows from decomposition by setting the inner label to
 \vspace{-5mm}
 \begin{equation*}
 \begin{array}{rcll}
-(a \dia b) \xrightarrow{x} c &\!\!=\!\!& (a \xrightarrow{\zero} b) \xrightarrow{x} c &\!\!\text{(definitions of $\dia$ and $a \xrightarrow{x} b$)}\\
+(a \dia b) \xrightarrow{x} c &\!\!=\!\!& (a \xrightarrow{\zero} b) \xrightarrow{x} c &\!\!\text{(definitions of $\dia$ and $\xrightarrow{x}$)}\\
  &\!\!=\!\!& a \xrightarrow{\zero} b\ \dia\ a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c &\!\!\text{(left decomposition)}\\
- &\!\!=\!\!& a\ \dia\ b\ \dia\ a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c &\!\!\text{(definitions of $\dia$ and $a \xrightarrow{x} b$)}\\
+ &\!\!=\!\!& a\ \dia\ b\ \dia\ a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c &\!\!\text{(definitions of $\dia$ and $\xrightarrow{x}$)}\\
  &\!\!=\!\!& (a\,\dia\,a\,\xrightarrow{x}\,c)\ \dia\ (b\,\dia\,b\,\xrightarrow{x}\,c) &\!\!\text{(associativity and commutativity of \dia)}\\
  &\!\!=\!\!& a \xrightarrow{x} c\ \dia\ b \xrightarrow{x} c &\!\!\text{(containment)}
 \end{array}
@@ -1069,9 +1068,9 @@ Distributivity then follows from decomposition by setting the inner label to
 \vspace{-3mm}
 
 \noindent
-To conclude, the set of requirements for interpreting edge-labelled graphs are:
-parallel composition, decomposition, and commutativity of $\dia$ inherited from
-sets~(\S\ref{sec-set}).
+To conclude, the complete set of requirements for interpreting edge-labelled
+graphs is: commutativity of $\dia$ inherited from sets~(\S\ref{sec-set}),
+parallel composition and decomposition.
 
 \newpage
 \noindent
@@ -1094,7 +1093,7 @@ vertex :: a -> LGraph s a
 vertex x = Map.singleton x Map.empty
 
 overlay :: (Ord a, Semiring s) => LGraph s a -> LGraph s a -> LGraph s a
-overlay = Map.unionWith (Map.unionWith (!\h{\hadd}!)) -- Parallel composition of edge labels
+overlay = Map.unionWith (Map.unionWith (!\h{\hadd}!)) -- Parallel composition
 \end{lstlisting}
 
 \noindent
@@ -1121,7 +1120,7 @@ connect s x y
     | otherwise = Map.unionsWith (Map.unionWith (!\h{\hadd}!)) [ x, y, newEdges ]
   where
     outgoing = Map.fromSet (const s) (Map.keysSet y)
-    newEdges = Map.fromSet (const outgoing) (Map.keysSet x)
+    newEdges = Map.fromSet (const outgoing) (Map.keysSet x) -- Decomposition
 \end{lstlisting}
 
 \noindent
@@ -1135,9 +1134,9 @@ toLGraph = fold vertex connect
 
 \noindent
 It is useful to combine edge-labelled graphs with the sequential composition
-requirement described in the previous section~(\S\ref{sec-preorder}). By
-computing the reflexive and transitive closure of an edge-labelled graph, it is
-possible to solve a variety of semiring optimisation problems, e.g.,
+law described in the previous section~(\S\ref{sec-preorder}). By computing the
+reflexive and transitive closure of an edge-labelled graph, it is possible to
+solve a variety of semiring optimisation problems, e.g.,
 see~\cite{2013_semirings_dolan}\cite{mohri2002semiring}.
 
 We have now seen how to use trees as a language for describing and manipulating
@@ -1295,10 +1294,10 @@ $\cdot$, respectively. Then:
 \vspace{-5mm}
 \begin{equation*}
 \begin{array}{rcll}
-z^{+} & = & z^{\cdot}\ +\ z^{+} & \text{($z^{+}$ is a zero of $+$)}\\
- & = & z^{\cdot} \cdot z^{+}\ +\ z^{+} & \text{($z^{\cdot}$ is a zero of $\cdot$)}\\
+z^{+} & = & z^{\cdot}\ +\ z^{+} & \text{($z^{+}$ is the zero of $+$)}\\
+ & = & z^{\cdot} \cdot z^{+}\ +\ z^{+} & \text{($z^{\cdot}$ is the zero of $\cdot$)}\\
  & = & z^{\cdot} \cdot z^{+} & \text{(containment)}\\
- & = & z^{\cdot} & \text{($z^{\cdot}$ is a zero of $\cdot$)}
+ & = & z^{\cdot} & \text{($z^{\cdot}$ is the zero of $\cdot$)}
 \end{array}
 \end{equation*}
 \vspace{-3mm}
@@ -1307,7 +1306,9 @@ z^{+} & = & z^{\cdot}\ +\ z^{+} & \text{($z^{+}$ is a zero of $+$)}\\
 Back in~\ref{sec-acyclic-graphs}, we used zero $\bot$ to model ``cycle errors''.
 As we now see, requiring both $a \dia \bot = a$ and
 $a \arr \bot = \bot \arr a = \bot$ was unnecessary: we could have picked just
-one of these requirements and the other one would follow.
+one of these laws and the other one would follow.
+For general (i.e., not acyclic) graphs, the fully-connected graph acts as the
+zero.
 
 \noindent
 Finally, let us prove another unusual property of united monoids: overlay and
@@ -1491,7 +1492,7 @@ Hoare et al. use the term ``bimonoid'' to refer to such structures (without
 investigating them in detail). In category theory, ``bimonoid'' is used for an
 unrelated concept (a structure with a monoid and a
 comonoid~\cite{porst_bimonoids}). The author of this paper chose to use the term
-``united monoids'', which appears to be unused and is also more specific
+``united monoids'', because it appears to be unused and is also more specific
 compared to ``bimonoid''.
 
 Rivas and Jaskelioff discuss various notions of computation viewing them as
@@ -1503,12 +1504,13 @@ equivalents of the presented ideas is an interesting direction of future work.
 
 \acks
 I would like to thank everyone who contributed to this research by giving
-feedback on earlier versions of this work, participating in numerous online and
+feedback on earlier versions of this work (particularly,~\cite{mokhov_alga}
+and~\cite{united_monoids_blog}), participating in numerous online and
 in-person discussions, and last but not least, expressing genuine interest and
 encouragement.
 Here is a most likely incomplete list (I apologise for any omissions):
-Arseniy Alekseyev, Roland Backhouse, Gershom Bazerman,
-Dave Clarke, Ulan Degenbaev, Chris Doran, Victor Khomenko, Adithya Kumar,
+Arseniy Alekseyev, Roland Backhouse, Gershom Bazerman, Dave Clarke,
+Ulan Degenbaev, Dominique Devriese, Chris Doran, Victor Khomenko, Adithya Kumar,
 Dave Long, Anton Lorenzen, Georgy Lukyanov, Alp Mestanogullari, Alexandre Moine,
 Andreas Nuyts, Greg Pfeil, Stefan Plantikow, Armando Santos, Danil Sokolov,
 Sjoerd Visscher, Leo White and Alex Yakovlev. I am also grateful to the
