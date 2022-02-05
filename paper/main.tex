@@ -8,8 +8,8 @@
 \makeatletter
 \renewcommand\@makefntext[1]{\leftskip=0.7em\hskip-0.75em\@makefnmark\hspace{1mm}#1}
 \makeatother
-\renewcommand{\footnotesize}{\small}
-\setlength{\footnotesep}{3mm}
+% \renewcommand{\footnotesize}{\small}
+% \setlength{\footnotesep}{3mm}
 
 \definecolor{darkblue}{rgb}{0,0,0.5}
 \definecolor{darkgreen}{rgb}{0,0.3,0}
@@ -61,6 +61,7 @@
 
 \newcommand{\code}[1]{\lstinline[mathescape]|#1|}
 \newcommand{\hcode}[1]{{\color{darkblue} \lstinline[keywordstyle={}]|#1|}} % h for "highlighted"
+\newcommand{\hfcode}[1]{{\color{darkblue} \lstinline[keywordstyle={},basicstyle=\footnotesize\ttfamily]|#1|}} % h for "highlighted"
 \newcommand{\h}[1]{{\itshape\color{grayblue}#1}} % h for "highlighted"
 \newcommand{\n}[1]{{\itshape\color{graygreen}#1}} % n for "normal"
 \newcommand{\up}[1]{{\itshape\color{graygreen}\textsuperscript{#1}}}
@@ -99,7 +100,7 @@
 
 \title{United Monoids}
 \subtitle{Finding Simplicial Sets and Labelled Algebraic Graphs in Trees}
-\author[~]{Andrey Mokhov}
+\author[\hspace{0.3mm}a,b]{Andrey Mokhov}
 \authorinfo{is a software engineer at Jane Street London,
   and a visiting fellow at Newcastle University, UK. His
   research interests are in applying abstract mathematics and
@@ -108,8 +109,8 @@
   \begin{description}
     \item[email:] \email{andrey.mokhov@ncl.ac.uk}
   \end{description}}
-\affiliation[~]{\hspace{-5.3mm}Jane Street, London, UK}
-\affiliation[~]{\hspace{-5.3mm}Newcastle University, Newcastle upon Tyne, UK}
+\affiliation[a]{\hspace{-1mm}Jane Street, London, UK}
+\affiliation[b]{\hspace{-1mm}Newcastle University, Newcastle upon Tyne, UK}
 
 \keywords{algebra, graphs, functional programming}
 
@@ -354,8 +355,8 @@ respect the associativity when interpreting trees. Concretely, the
 
 \begin{lstlisting}[float,label=lst-tree-std,xleftmargin=0pt,caption={
     The \code{Tree} data type and instances of various standard Haskell type classes.
-}]
-!\hrulefill!
+},captionpos=t]
+!\vspace{0mm}!
 data Tree s a = Leaf a | Node s (Tree s a) (Tree s a)
 
 fold :: (a -> m) -> (s -> m -> m -> m) -> Tree s a -> m -- Note: !\h{node s}! must be associative
@@ -398,15 +399,13 @@ instance Traversable (Tree s) where
 
 instance IsString a => IsString (Tree s a) where -- This makes !\h{"a"}! a shortcut for !\h{Leaf "a"}!
     fromString = Leaf . fromString
-!\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
 
 \begin{lstlisting}[float,label=lst-tree,xleftmargin=0pt,belowskip=-2mm,caption={
     A basic API for constructing and manipulating trees. We use the standard
     module \code{Data.L}\code{ist.N}\code{onEmpty} for representing non-empty
-    lists, and \code{Data.S}\code{et} for sets.}]
-!\rule[2mm]{\textwidth}{0.4pt}!
-!\vspace{-7mm}!
+    lists, and \code{Data.S}\code{et} for sets.},captionpos=t]
+!\vspace{-2mm}!
 leaf :: a -> Tree s a -- A tree with a single leaf
 leaf = Leaf
 
@@ -430,7 +429,7 @@ prune = sequence -- Via !\h{Traversable}!
 
 filter :: (a -> Bool) -> Tree s a -> Maybe (Tree s a) -- Prune all leaves !\h{a}! with !\h{p a = False}!
 filter p = traverse (\a -> if p a then Just a else Nothing) -- Via !\h{Traversable}!
-!\rule[2mm]{\textwidth}{0.4pt}!
+!\vspace{-2mm}!
 \end{lstlisting}
 
 \noindent
@@ -450,7 +449,9 @@ subsequent sections, we will study data structures obtained by instantiating
 \hcode{Tree s a} with different semirings~\hcode{s}, and by adding more
 requirements (on top of associativity) to tree interpretations.
 
+\vspace{-1mm}
 \section{Sets}\label{sec-set}
+\vspace{-0.5mm}
 
 In this section we instantiate \hcode{Tree s a} with the \emph{trivial semiring}
 \hcode{s = ()} where $\zero = \one = \text{\hcode{()}}$:
@@ -467,9 +468,8 @@ simply reuse \hcode{leafSet} from Listing~\ref{lst-tree}.
 \begin{lstlisting}[label=lst-set,xleftmargin=0pt,belowskip=7pt,caption={
     Implementing a part of the standard \code{Data.S}\code{et} API with
     \hcode{TSet}.
-}]
-!\rule[2mm]{\textwidth}{0.4pt}!
-!\vspace{-7mm}!
+},captionpos=t]
+!\vspace{-1mm}!
 type TSet a = Tree () a -- Sets are trees with !\h{()}!-labelled internal nodes
 
 instance Semiring () where -- The trivial semiring with !\h{zero = one = ()}!
@@ -498,7 +498,7 @@ filter = Tree.filter
 
 map :: (a -> b) -> TSet a -> TSet b
 map = fmap -- Via !\h{Functor}!
-!\rule[2mm]{\textwidth}{0.4pt}!
+!\vspace{0mm}!
 \end{lstlisting}
 
 \noindent
@@ -509,7 +509,7 @@ in~\S\ref{sec-tree}.
 In addition to associativity, the set interpretation of trees puts two new
 requirements on every call site of \hcode{fold leaf node}\footnote{
     Haskell's type system isn't powerful enough to check such requirements, so
-    we should use \hcode{fold} with care. A dependently typed language, such as
+    we should use \hfcode{fold} with care. A dependently typed language, such as
     Agda~\cite{2007_norell_agda}, could help us here.
 }:
 
@@ -604,9 +604,8 @@ simplicial set (the rightmost one above).
 
 \begin{lstlisting}[float,label=lst-simplicial-set,xleftmargin=0pt,caption={
     A basic API for working with simplicial sets represented by trees.
-}]
-!\rule[2mm]{\textwidth}{0.4pt}!
-!\vspace{-7mm}!
+},captionpos=t]
+!\vspace{0mm}!
 type TSimplicialSet a = Tree Bool a -- Simplicial sets are trees over the Boolean semiring
 
 instance Semiring Bool where -- The Boolean semiring with !\h{zero = False}! and !\h{one = True}!
@@ -647,7 +646,6 @@ filter = Tree.filter
 
 map :: (a -> b) -> TSimplicialSet a -> TSimplicialSet b -- The so-called !\n{``}!simplicial map!\n{''}!
 map = fmap -- Via !\h{Functor}!
-!\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
 
 \noindent
@@ -815,9 +813,8 @@ will allow us to support \emph{edge-labelled graphs}.
 \begin{lstlisting}[float,label=lst-graph,xleftmargin=0pt,caption={
     Implementing a part of the \code{Algebra.G}\code{raph} API~\cite{mokhov_alga}
     with \hcode{Tree Bool a}.
-}]
-!\rule[2mm]{\textwidth}{0.4pt}!
-!\vspace{-7mm}!
+},captionpos=t]
+!\vspace{0mm}!
 type TGraph a = Tree Bool a -- Graphs are trees over the Boolean semiring
 
 vertex :: a -> TGraph a
@@ -854,7 +851,6 @@ hasEdge :: Ord a => a -> a -> TGraph a -> Bool
 hasEdge x y graph = case induce (\a -> a == x || a == y) graph of
     Nothing -> False
     Just sub -> elem (x,!\,!y) (edgeSet sub) -- Here !\h{sub}! can only contain vertices !\h{x}! and !\h{y}!
-!\rule[2mm]{\textwidth}{0.4pt}!
 \end{lstlisting}
 
 \section{Preorders and Generalised Transitively-Closed Graphs}\label{sec-preorder}
@@ -1103,12 +1099,12 @@ When implementing \hcode{connect}, we come across a subtle issue with
 edges from \hcode{LGraph s a} is an important optimisation when working
 with sparse graphs in practice, which is why the code below requires
 \hcode{Eq s}\footnote{
-    We do not need the full power of \hcode{Eq s} here: we just need to test if
-    a given edge label is~\zero. For some types \hcode{s}, testing for \zero is
+    We do not need the full power of \hfcode{Eq s} here: we just need to test if
+    a given edge label is~\zero. For some types \hfcode{s}, testing for \zero is
     much easier than a general equality test; for example, testing if a
-    \hcode{Map k v} is empty is trivial but \hcode{Eq (Map k v)} is undecidable
-    for some choices of \hcode{v}. To resolve this problem, one can switch to a
-    more precise constraint like \hcode{EqZero s}.
+    \hfcode{Map k v} is empty is trivial but \hfcode{Eq (Map k v)} is undecidable
+    for some choices of \hfcode{v}. To resolve this problem, one can switch to a
+    more precise constraint like \hfcode{EqZero s}.
 }. Note that the \hcode{Tree}-based representation of graphs sidesteps this
 issue because \hcode{overlay x y} and \hcode{connect zero x y} are represented
 by the same tree \hcode{Node zero x y}.
@@ -1439,7 +1435,7 @@ Semantic~\cite{semantic_paper}\cite{semantic_repo}. In this paper we further
 distil the essence of the algebraic approach to working with graphs by replacing
 the data type
 
-\begin{lstlisting}[basicstyle=\sffamily\smaller]
+\begin{lstlisting}[basicstyle=\sffamily\small]
 data Graph a = Empty | Vertex a | Overlay (Graph a) (Graph a) | Connect (Graph a) (Graph a)
 \end{lstlisting}
 
