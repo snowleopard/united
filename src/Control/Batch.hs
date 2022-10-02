@@ -128,6 +128,7 @@ instance Batch t Proxy where
 instance Batch t Identity where
     batch f effects = Identity $ f (runIdentity . effects)
 
+{-# ANN module "HLint: ignore Redundant lambda" #-}
 instance Batch t ((->) env) where
     batch f effects = \env -> f (`effects` env)
 
@@ -291,7 +292,7 @@ class BatchPi t f where
     batchPi :: Pi t f -> f (Pi t Identity)
 
 unitPi :: (Functor f, BatchPi Zero f) => f ()
-unitPi = () <$ batchPi identityPi
+unitPi = void (batchPi identityPi)
 
 instance BatchPi t Proxy where
     batchPi _ = Proxy
