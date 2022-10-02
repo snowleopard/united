@@ -208,6 +208,8 @@ rightIdentitySelect (f :|: k) = either (runIdentity k) id <$> f
 rightIdentitySelectInv :: Applicative f => f ~> f :|: Identity
 rightIdentitySelectInv f = (Right <$> f) :|: pure absurd
 
+{-# ANN module "HLint: ignore Redundant lambda" #-}
+{-# ANN module "HLint: ignore Eta reduce" #-}
 associativitySelect :: (Functor f, Functor g, Functor h) => f :|: (g :|: h) ~> (f :|: g) :|: h
 associativitySelect (f :|: (g :|: h)) = ((p <$> f) :|: (q <$> g)) :|: (r <$> h)
   where
