@@ -147,7 +147,8 @@ instance (Fold t, Monoid m) => Batch t ((,) m) where
 
 -- TODO: Is it possible to get rid of the unsafe fromJust?
 -- In principle, we shouldn't need Fold t here since the order is irrelevant,
--- however, for an uncountable t, batch will never terminate anyway
+-- however, for an uncountable t, `batch` may never terminate anyway, because it
+-- may keep looking for `Nothing` forever.
 instance Fold t => Batch t Maybe where
     batch f effects = case fold (All . isJust . effects) of
         All True  -> Just $ f (fromJust . effects)
@@ -322,6 +323,9 @@ commuteIdentity = Identity . fmap runIdentity
 -- @commuteIdentity@ above (we don't want the Functor constraint, of course).
 fmapKV :: BatchKV (One a) f => (a -> b) -> f (Identity a) -> f b
 fmapKV f x = batchKV (\get -> f (runIdentity $ get One)) (\One -> x)
+
+sequenceKV :: BatchKV k f => (forall x. k x -> f (v x)) -> f (k x -> v x)
+sequenceKV = batchKV (\get key -> get key)
 
 instance BatchKV t Proxy where
     batchKV _ _ = Proxy
