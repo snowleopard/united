@@ -17,6 +17,7 @@ module Control.Batch where
 import Control.Applicative
 import Data.Array
 import Data.Function
+import Data.Functor
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product

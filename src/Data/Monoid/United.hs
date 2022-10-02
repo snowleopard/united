@@ -90,13 +90,6 @@ instance United Time where
     connect (Time x) (Time y) = Time (x + y)
 
 ------------------------------- Algebraic graphs -------------------------------
--- TODO: Remove orphan instance
-instance Semigroup (Graph a) where
-    (<>) = Graph.overlay
-
-instance Monoid (Graph a) where
-    mempty = Graph.empty
-
 instance Semilattice (Graph a)
 
 instance United (Graph a) where
