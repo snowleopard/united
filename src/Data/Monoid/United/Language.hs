@@ -68,7 +68,6 @@ instance Applicative (U e) where
     (<*>) = ap
 
 instance Monad (U e) where
-    return  = Tip
     x >>= f = fold Nil f Bin x
 
 instance Bifunctor U where
